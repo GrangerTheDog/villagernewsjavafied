@@ -60,14 +60,24 @@ public final class LangConverter {
 	/**
 	 * Bedrock keys like "entity.oreville_vn:mlkxjo.name" (and, e.g.,
 	 * "item.spawn_egg.entity.oreville_vn:mlkxjo.name") carry the addon's own
-	 * namespace immediately before a colon, with an arbitrary prefix before that.
-	 * Java resolves translation keys as "entity.&lt;modid&gt;.path", so only the
-	 * namespace token right before the colon is swapped for our mod id here -
-	 * as long as entities/items are registered under the same short id used as
-	 * the path (e.g. "villagernewsjavafied:mlkxjo"), Java's default
-	 * description-id lookup resolves correctly with no per-entry code needed.
+	 * namespace immediately before a colon, with an arbitrary prefix before that,
+	 * and always end in ".name". Java's actual description id (see
+	 * {@code Util.makeDescriptionId}) is just "entity.&lt;modid&gt;.path" - no
+	 * ".name" suffix at all (confirmed against vanilla's own lang file: it's
+	 * "item.minecraft.diamond_sword", never "...diamond_sword.name") - so both
+	 * the namespace swap and the suffix strip are needed for the result to
+	 * actually match what Java looks up, as long as entities/items are
+	 * registered under the same short id used as the path here (e.g.
+	 * "villagernewsjavafied:mlkxjo").
 	 */
 	private static String toJavaKey(String bedrockKey) {
-		return bedrockKey.replaceAll("[A-Za-z0-9_]+:", ConverterUtil.MOD_ID + ".");
+		if (!bedrockKey.contains(":")) {
+			return bedrockKey;
+		}
+		String javaKey = bedrockKey.replaceAll("[A-Za-z0-9_]+:", ConverterUtil.MOD_ID + ".");
+		if (javaKey.endsWith(".name")) {
+			javaKey = javaKey.substring(0, javaKey.length() - ".name".length());
+		}
+		return javaKey;
 	}
 }

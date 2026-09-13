@@ -1,5 +1,6 @@
 package com.javafied.villagernews.converter;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
@@ -26,7 +27,8 @@ public final class AnimationConverter {
 			return animationToPath;
 		}
 
-		Path outDir = outputAssetsDir.resolve("animations").resolve("entity");
+		// GeckoLib 5.x scans "geckolib/animations/" (not "animations/") to avoid clashing with vanilla's own folder.
+		Path outDir = outputAssetsDir.resolve("geckolib").resolve("animations").resolve("entity");
 		Files.createDirectories(outDir);
 
 		try (var stream = Files.list(animationsDir)) {
@@ -36,18 +38,49 @@ public final class AnimationConverter {
 				if (animations == null) {
 					continue;
 				}
+				normalizeRelativeTo(animations);
 
 				String fileName = file.getFileName().toString();
 				String baseName = fileName.substring(0, fileName.length() - ".json".length());
 				Path outPath = outDir.resolve(baseName + ".animation.json");
 				ConverterUtil.writeJson(outPath, root);
 
-				String relativePath = "animations/entity/" + baseName + ".animation.json";
+				String relativePath = "geckolib/animations/entity/" + baseName + ".animation.json";
 				for (String animationName : animations.keySet()) {
 					animationToPath.put(animationName, relativePath);
 				}
 			}
 		}
 		return animationToPath;
+	}
+
+	/**
+	 * Newer Bedrock animations nest a bone's {@code relative_to} as e.g.
+	 * {@code {"rotation": "entity"}}; GeckoLib 5.5.5's parser only accepts a
+	 * plain string there (it throws a JsonSyntaxException otherwise, which
+	 * silently drops the *entire* file, not just the offending bone). Every
+	 * occurrence we've seen only ever sets "rotation", so collapsing to that
+	 * string is a safe, direct translation rather than a lossy guess.
+	 */
+	private static void normalizeRelativeTo(JsonObject animations) {
+		for (String animationName : animations.keySet()) {
+			JsonObject animation = animations.getAsJsonObject(animationName);
+			JsonObject bones = animation.getAsJsonObject("bones");
+			if (bones == null) {
+				continue;
+			}
+			for (String boneName : bones.keySet()) {
+				JsonObject bone = bones.getAsJsonObject(boneName);
+				JsonElement relativeTo = bone.get("relative_to");
+				if (relativeTo != null && relativeTo.isJsonObject()) {
+					JsonElement rotation = relativeTo.getAsJsonObject().get("rotation");
+					if (rotation != null && rotation.isJsonPrimitive()) {
+						bone.add("relative_to", rotation);
+					} else {
+						bone.remove("relative_to");
+					}
+				}
+			}
+		}
 	}
 }

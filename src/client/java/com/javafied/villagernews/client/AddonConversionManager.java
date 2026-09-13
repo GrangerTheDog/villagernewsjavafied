@@ -30,8 +30,31 @@ public final class AddonConversionManager {
 		return FabricLoader.getInstance().getGameDir().resolve("resourcepacks").resolve(PACK_ID);
 	}
 
+	private static Path lastPathFile() {
+		return FabricLoader.getInstance().getGameDir().resolve("villagernewsjavafied").resolve("last-addon-path.txt");
+	}
+
 	public static boolean isConverted() {
 		return Files.exists(convertedPackDir().resolve("manifest.json"));
+	}
+
+	/** Remembers the path the user last typed, so the setup screen can pre-fill it next time. */
+	public static String loadLastAddonPath() {
+		try {
+			return Files.readString(lastPathFile()).strip();
+		} catch (IOException e) {
+			return "";
+		}
+	}
+
+	public static void saveLastAddonPath(String path) {
+		try {
+			Path file = lastPathFile();
+			Files.createDirectories(file.getParent());
+			Files.writeString(file, path);
+		} catch (IOException e) {
+			VillagerNewsJavafied.LOGGER.warn("Could not remember the add-on path", e);
+		}
 	}
 
 	public static void convert(Path addonSource) throws IOException {

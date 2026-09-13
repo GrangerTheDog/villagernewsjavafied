@@ -27,7 +27,8 @@ public final class GeometryConverter {
 			return identifierToPath;
 		}
 
-		Path outDir = outputAssetsDir.resolve("geo").resolve("entity");
+		// GeckoLib 5.x scans "geckolib/models/" (not "geo/") to avoid clashing with vanilla's own "models/" folder.
+		Path outDir = outputAssetsDir.resolve("geckolib").resolve("models").resolve("entity");
 		Files.createDirectories(outDir);
 
 		try (var stream = Files.walk(modelsDir)) {
@@ -54,7 +55,7 @@ public final class GeometryConverter {
 
 					Path outPath = outDir.resolve(slug + ".geo.json");
 					ConverterUtil.writeJson(outPath, outFile);
-					identifierToPath.put(identifier, "geo/entity/" + slug + ".geo.json");
+					identifierToPath.put(identifier, "geckolib/models/entity/" + slug + ".geo.json");
 				}
 			}
 		}

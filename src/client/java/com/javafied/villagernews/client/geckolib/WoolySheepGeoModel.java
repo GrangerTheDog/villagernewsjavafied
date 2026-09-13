@@ -13,12 +13,15 @@ import net.minecraft.resources.Identifier;
  */
 public final class WoolySheepGeoModel extends GeoModel<WoolySheepReplacement> {
 	private static final String MOD_ID = "villagernewsjavafied";
+	// GeckoLib's own loader prepends "geo/"/"animations/" itself (it told us so via
+	// a "superfluous prefix" error when we included it) - these identifiers are
+	// just "entity/<name>", not the literal file path under assets/.
 	private static final Identifier MODEL =
-			Identifier.fromNamespaceAndPath(MOD_ID, "geo/entity/geometry_oreville_vn_-650401518");
+			Identifier.fromNamespaceAndPath(MOD_ID, "entity/geometry_oreville_vn_-650401518");
 	private static final Identifier TEXTURE =
 			Identifier.fromNamespaceAndPath(MOD_ID, "textures/oreville/vn/diw.png");
 	private static final Identifier ANIMATION =
-			Identifier.fromNamespaceAndPath(MOD_ID, "animations/entity/8b886b15");
+			Identifier.fromNamespaceAndPath(MOD_ID, "entity/8b886b15");
 
 	@Override
 	public Identifier getModelResource(GeoRenderState renderState) {

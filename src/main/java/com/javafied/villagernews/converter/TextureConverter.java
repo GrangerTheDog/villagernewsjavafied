@@ -5,13 +5,14 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
 /**
- * Copies Bedrock {@code textures/**} through, decoding {@code .tga} to
- * {@code .png} (the only format vanilla Java resource loading accepts) while
- * keeping every other relative path identical.
+ * Copies Bedrock {@code textures/**} through as plain RGBA {@code .png}
+ * files (the only form vanilla Java resource loading reliably accepts),
+ * decoding {@code .tga} and re-encoding every {@code .png} too - Bedrock/
+ * Blockbench sometimes exports palette-indexed PNGs, which Minecraft's own
+ * texture loader silently fails to load (surfaces as "Missing textures").
  */
 public final class TextureConverter {
 	private TextureConverter() {
@@ -35,7 +36,8 @@ public final class TextureConverter {
 				Files.createDirectories(targetDir);
 
 				if (lower.endsWith(".png")) {
-					Files.copy(file, targetDir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
+					BufferedImage image = toArgb(ImageIO.read(file.toFile()));
+					ImageIO.write(image, "png", targetDir.resolve(name).toFile());
 					count++;
 				} else if (lower.endsWith(".tga")) {
 					BufferedImage image = TgaImage.read(file);
@@ -46,5 +48,14 @@ public final class TextureConverter {
 			}
 		}
 		return count;
+	}
+
+	private static BufferedImage toArgb(BufferedImage source) {
+		if (source.getType() == BufferedImage.TYPE_INT_ARGB) {
+			return source;
+		}
+		BufferedImage converted = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		converted.getGraphics().drawImage(source, 0, 0, null);
+		return converted;
 	}
 }
