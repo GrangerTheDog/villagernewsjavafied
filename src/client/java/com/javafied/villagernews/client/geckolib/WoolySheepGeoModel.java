@@ -21,7 +21,7 @@ public final class WoolySheepGeoModel extends GeoModel<WoolySheepReplacement> {
 	private static final Identifier TEXTURE =
 			Identifier.fromNamespaceAndPath(MOD_ID, "textures/oreville/vn/diw.png");
 	private static final Identifier ANIMATION =
-			Identifier.fromNamespaceAndPath(MOD_ID, "entity/8b886b15");
+			Identifier.fromNamespaceAndPath(MOD_ID, "entity/animation_oreville_vn_hgejgd");
 
 	@Override
 	public Identifier getModelResource(GeoRenderState renderState) {

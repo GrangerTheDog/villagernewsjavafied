@@ -20,7 +20,8 @@ import net.minecraft.world.entity.Entity;
  */
 public final class VillagerReplacementGeoModel extends GeoModel<VillagerReplacement> {
 	private static final String MOD_ID = "villagernewsjavafied";
-	private static final Identifier ANIMATION = Identifier.fromNamespaceAndPath(MOD_ID, "entity/8b886b15");
+	private static final Identifier ANIMATION =
+			Identifier.fromNamespaceAndPath(MOD_ID, "entity/animation_oreville_vn_dapvpm");
 	private static final DataTicket<String> VARIANT = DataTicket.create("villager_variant", String.class);
 
 	@Override

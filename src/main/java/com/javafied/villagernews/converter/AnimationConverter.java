@@ -10,10 +10,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Copies Bedrock {@code animations/*.json} through as GeckoLib animation files
- * (same schema GeckoLib already consumes from Blockbench exports) and indexes
- * which output file defines which animation name, since Bedrock happily bundles
- * many named animations - for many different entities - into one file.
+ * Converts Bedrock {@code animations/*.json} into GeckoLib animation files
+ * (same schema GeckoLib already consumes from Blockbench exports), one
+ * output file per animation identifier rather than mirroring Bedrock's own
+ * grouping. Bedrock happily bundles thousands of named animations - for many
+ * different entities - into one shared file, but GeckoLib's parser drops an
+ * *entire* file the moment any single animation in it uses a construct it
+ * doesn't support (this add-on has already hit two such cases). Splitting
+ * per-animation means one bad entry can't take every other entity's
+ * animations down with it, and only the genuinely broken ones fail.
  */
 public final class AnimationConverter {
 	private AnimationConverter() {
@@ -39,15 +44,20 @@ public final class AnimationConverter {
 					continue;
 				}
 				normalizeRelativeTo(animations);
+				String formatVersion = root.has("format_version") ? root.get("format_version").getAsString() : "1.10.0";
 
-				String fileName = file.getFileName().toString();
-				String baseName = fileName.substring(0, fileName.length() - ".json".length());
-				Path outPath = outDir.resolve(baseName + ".animation.json");
-				ConverterUtil.writeJson(outPath, root);
-
-				String relativePath = "geckolib/animations/entity/" + baseName + ".animation.json";
 				for (String animationName : animations.keySet()) {
-					animationToPath.put(animationName, relativePath);
+					String slug = ConverterUtil.slug(animationName);
+
+					JsonObject outFile = new JsonObject();
+					outFile.addProperty("format_version", formatVersion);
+					JsonObject singleAnimation = new JsonObject();
+					singleAnimation.add(animationName, animations.get(animationName));
+					outFile.add("animations", singleAnimation);
+
+					Path outPath = outDir.resolve(slug + ".animation.json");
+					ConverterUtil.writeJson(outPath, outFile);
+					animationToPath.put(animationName, "geckolib/animations/entity/" + slug + ".animation.json");
 				}
 			}
 		}
