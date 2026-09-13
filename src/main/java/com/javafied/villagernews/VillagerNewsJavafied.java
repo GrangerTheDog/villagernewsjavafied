@@ -1,5 +1,7 @@
 package com.javafied.villagernews;
 
+import com.javafied.villagernews.content.ModItems;
+
 import net.fabricmc.api.ModInitializer;
 
 import net.minecraft.resources.Identifier;
@@ -15,6 +17,7 @@ public class VillagerNewsJavafied implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		LOGGER.info("Villager News: Javafied initializing");
+		ModItems.init();
 	}
 
 	public static Identifier id(String path) {

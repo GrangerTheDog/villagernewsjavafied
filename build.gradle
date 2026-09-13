@@ -58,6 +58,17 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+tasks.register('runConverter', JavaExec) {
+	group = 'villagernewsjavafied'
+	description = 'Runs the addon converter against dev/addon-src, writing output to dev/converted.'
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'com.javafied.villagernews.converter.ConverterCli'
+	args = [
+			"${project.projectDir}/dev/addon-src",
+			"${project.projectDir}/dev/converted"
+	]
+}
+
 // configure the maven publication
 publishing {
 	publications {
