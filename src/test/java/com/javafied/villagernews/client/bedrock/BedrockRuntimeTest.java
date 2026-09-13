@@ -146,6 +146,8 @@ class BedrockRuntimeTest {
 		}
 		assertTrue(plan.poses().values().stream().anyMatch(p -> Math.abs(p.rx) + Math.abs(p.ry) > 1),
 				"expected the head/body to turn towards the target");
+		// v.dzpjns ("mid-gesture") gates the walk cycle; it must settle back to 0 when no line is playing.
+		assertEquals(0, state.variables().get("dzpjns").getAsNumber(), "villager stuck in the gesture state");
 
 		// The addon's "offset" animation drops the root to undo the script's puppet teleport;
 		// with the ported lift applied, the model should end up standing on the villager's own feet.

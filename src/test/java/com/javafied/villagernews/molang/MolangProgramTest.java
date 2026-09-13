@@ -105,6 +105,9 @@ class MolangProgramTest {
 		assertEquals(0, MolangProgram.of("v.epwebi == 'ufernq'").evalNumber(scope));
 		assertEquals(1, MolangProgram.of("2 == 2").evalNumber(scope));
 		assertEquals(0, MolangProgram.of("2 != 2").evalNumber(scope));
+		variables.set("skwjdr", Value.of(0));
+		assertEquals(0, MolangProgram.of("v.skwjdr != 'default'").evalNumber(scope), "mixed types never compare");
+		assertEquals(0, MolangProgram.of("v.skwjdr == 'default'").evalNumber(scope), "mixed types never compare");
 		MolangProgram.of("1 ? { v.hat = v.epwebi != 'ufernq'; };").eval(scope);
 		assertEquals(1, variables.get("hat").getAsNumber(), "also inside blocks");
 	}

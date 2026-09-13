@@ -40,8 +40,8 @@ public final class MolangProgram {
 	private static final ObjectValue MATH = new BedrockMath();
 	static final String EQUALS = "__villagernewsjavafied_equals";
 	static final String NOT_EQUALS = "__villagernewsjavafied_not_equals";
-	private static final Function<Object> EQUALS_FUNCTION = (ctx, args) -> Value.of(equal(args.next().eval(), args.next().eval()));
-	private static final Function<Object> NOT_EQUALS_FUNCTION = (ctx, args) -> Value.of(!equal(args.next().eval(), args.next().eval()));
+	private static final Function<Object> EQUALS_FUNCTION = (ctx, args) -> compare(args.next().eval(), args.next().eval(), true);
+	private static final Function<Object> NOT_EQUALS_FUNCTION = (ctx, args) -> compare(args.next().eval(), args.next().eval(), false);
 	private static volatile Consumer<String> errorReporter = message -> {
 	};
 
@@ -75,12 +75,21 @@ public final class MolangProgram {
 		return scope;
 	}
 
-	/** Bedrock equality: strings compare as text, anything else numerically. */
-	private static boolean equal(Value a, Value b) {
-		if (a instanceof StringValue || b instanceof StringValue) {
-			return a instanceof StringValue && b instanceof StringValue && a.getAsString().equals(b.getAsString());
+	/**
+	 * Bedrock equality: two strings compare as text, two non-strings
+	 * numerically, and a string against anything else is false for both
+	 * {@code ==} and {@code !=} (Bedrock refuses to compare mixed types). That
+	 * last case matters: villagers start with {@code v.skwjdr=0} and leave their
+	 * idle gesture state on {@code v.skwjdr!='default'} - were that true, they'd
+	 * sit in the gesturing state forever and never play their walk cycle.
+	 */
+	private static Value compare(Value a, Value b, boolean equals) {
+		boolean aString = a instanceof StringValue;
+		if (aString != b instanceof StringValue) {
+			return Value.of(false);
 		}
-		return a.getAsNumber() == b.getAsNumber();
+		boolean equal = aString ? a.getAsString().equals(b.getAsString()) : a.getAsNumber() == b.getAsNumber();
+		return Value.of(equal == equals);
 	}
 
 	/**
