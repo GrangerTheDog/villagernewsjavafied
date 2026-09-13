@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "villagernewsjavafied",
+	"version": "${version}",
+	"name": "Villager News: Javafied",
+	"description": "Brings Element Animation's Villager News to Java Edition via an automatic, on-device conversion of your own legally-owned copy of the Bedrock add-on. Ships with none of the add-on's own content.",
+	"authors": [
+		"zuidweg50"
+	],
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.javafied.villagernews.VillagerNewsJavafied"
+		],
+		"client": [
+			"com.javafied.villagernews.client.VillagerNewsJavafiedClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*",
+		"geckolib": ">=5.5.5"
+	}
+}

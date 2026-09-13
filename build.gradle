@@ -1,0 +1,72 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'GeckoLib'
+				url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+			}
+		}
+		filter { includeGroupAndSubgroups('com.geckolib') }
+	}
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"villagernewsjavafied" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// GeckoLib, for rendering the converted Bedrock geometry/animations.
+	implementation "com.geckolib:geckolib-fabric-${project.minecraft_version}:${project.geckolib_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		// Add repositories to publish to here, if ever needed.
+	}
+}
