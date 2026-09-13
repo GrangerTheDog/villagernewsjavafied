@@ -37,3 +37,6 @@ replay_*.log
 /dev/
 *.mcaddon
 /run-converted/
+
+# Created by Minecraft's log4j config when tests load game classes
+/logs/

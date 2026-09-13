@@ -1,0 +1,236 @@
+package com.javafied.villagernews.client.bedrock;
+
+import com.javafied.villagernews.VillagerNewsJavafied;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Consumer;
+
+/**
+ * The add-on's own client-side definitions (carried over by the converter
+ * into {@code assets/<modid>/bedrock/}), reloaded with resources.
+ */
+public final class BedrockDefinitions implements ResourceManagerReloadListener {
+	public static final Identifier ID = VillagerNewsJavafied.id("bedrock_definitions");
+
+	public record ControllerRef(String name, String condition) {
+	}
+
+	/** One {@code {"bone_or_*pattern": "molang"}} entry of a render controller's materials / part_visibility list. */
+	public record BonePattern(String pattern, String molang) {
+		public boolean matches(String bone) {
+			if (pattern.equals("*")) {
+				return true;
+			}
+			if (pattern.endsWith("*")) {
+				return bone.startsWith(pattern.substring(0, pattern.length() - 1));
+			}
+			return bone.equalsIgnoreCase(pattern);
+		}
+	}
+
+	public record ClientEntity(String identifier, Map<String, String> geometry, Map<String, String> textures,
+			Map<String, String> materials, Map<String, String> animations, List<String> initialize,
+			List<String> preAnimation, String scale, List<ControllerRef> renderControllers, List<ControllerRef> animate) {
+	}
+
+	public record RenderController(Map<String, List<String>> arrays, String geometry, List<String> textures,
+			List<BonePattern> materials, List<BonePattern> partVisibility) {
+	}
+
+	public record Snapshot(Map<String, ClientEntity> clientEntities, Map<String, RenderController> renderControllers,
+			Map<String, Map<String, JsonElement>> propertyDefaults, BedrockMaterials materials) {
+		/** Accepts a full identifier or just its path ("villager"), since the add-on's namespace is its own business. */
+		public ClientEntity clientEntity(String identifier) {
+			String key = identifier.toLowerCase(Locale.ROOT);
+			ClientEntity exact = clientEntities.get(key);
+			if (exact != null || key.contains(":")) {
+				return exact;
+			}
+			for (Map.Entry<String, ClientEntity> entry : clientEntities.entrySet()) {
+				if (entry.getKey().endsWith(":" + key)) {
+					return entry.getValue();
+				}
+			}
+			return null;
+		}
+
+		public RenderController renderController(String name) {
+			return renderControllers.get(name.toLowerCase(Locale.ROOT));
+		}
+
+		public Map<String, JsonElement> properties(String identifier) {
+			return propertyDefaults.getOrDefault(identifier, Map.of());
+		}
+	}
+
+	private static volatile Snapshot current = new Snapshot(Map.of(), Map.of(), Map.of(), BedrockMaterials.EMPTY);
+
+	public static Snapshot get() {
+		return current;
+	}
+
+	@Override
+	public void onResourceManagerReload(ResourceManager manager) {
+		List<JsonObject> clientEntities = new ArrayList<>();
+		List<JsonObject> renderControllers = new ArrayList<>();
+		List<JsonObject> materials = new ArrayList<>();
+		List<JsonObject> properties = new ArrayList<>();
+		forEach(manager, "bedrock/entity", ".json", clientEntities::add);
+		forEach(manager, "bedrock/render_controllers", ".json", renderControllers::add);
+		forEach(manager, "bedrock/materials", ".material", materials::add);
+		forEach(manager, "bedrock", "properties.json", properties::add);
+
+		current = parse(clientEntities, renderControllers, materials, properties);
+		VillagerNewsJavafied.LOGGER.info("Loaded {} Bedrock client entities and {} render controllers",
+				current.clientEntities().size(), current.renderControllers().size());
+	}
+
+	/** Builds a snapshot from the carried-over files' JSON; separate from resource IO so it can be tested directly. */
+	public static Snapshot parse(List<JsonObject> clientEntityFiles, List<JsonObject> renderControllerFiles,
+			List<JsonObject> materialFiles, List<JsonObject> propertyFiles) {
+		Map<String, ClientEntity> clientEntities = new HashMap<>();
+		for (JsonObject json : clientEntityFiles) {
+			JsonObject description = json.getAsJsonObject("minecraft:client_entity").getAsJsonObject("description");
+			ClientEntity entity = parseClientEntity(description);
+			clientEntities.put(entity.identifier().toLowerCase(Locale.ROOT), entity);
+		}
+		Map<String, RenderController> renderControllers = new HashMap<>();
+		for (JsonObject json : renderControllerFiles) {
+			JsonObject controllers = json.getAsJsonObject("render_controllers");
+			for (String name : controllers.keySet()) {
+				renderControllers.put(name.toLowerCase(Locale.ROOT), parseRenderController(controllers.getAsJsonObject(name)));
+			}
+		}
+		JsonObject materials = new JsonObject();
+		for (JsonObject json : materialFiles) {
+			JsonObject defs = json.has("materials") ? json.getAsJsonObject("materials") : json;
+			defs.entrySet().forEach(e -> materials.add(e.getKey(), e.getValue()));
+		}
+		Map<String, Map<String, JsonElement>> properties = new HashMap<>();
+		for (JsonObject json : propertyFiles) {
+			for (String identifier : json.keySet()) {
+				Map<String, JsonElement> defaults = new HashMap<>();
+				json.getAsJsonObject(identifier).entrySet().forEach(e -> defaults.put(e.getKey(), e.getValue()));
+				properties.put(identifier, Map.copyOf(defaults));
+			}
+		}
+		return new Snapshot(Map.copyOf(clientEntities), Map.copyOf(renderControllers), Map.copyOf(properties),
+				BedrockMaterials.parse(materials));
+	}
+
+	private static void forEach(ResourceManager manager, String dir, String suffix, Consumer<JsonObject> consumer) {
+		Map<Identifier, Resource> found = manager.listResources(dir,
+				id -> id.getNamespace().equals(VillagerNewsJavafied.MOD_ID) && id.getPath().endsWith(suffix));
+		for (Map.Entry<Identifier, Resource> entry : found.entrySet()) {
+			try (Reader reader = entry.getValue().openAsReader()) {
+				consumer.accept(JsonParser.parseReader(reader).getAsJsonObject());
+			} catch (IOException | RuntimeException e) {
+				VillagerNewsJavafied.LOGGER.warn("Skipping unreadable Bedrock definition {}", entry.getKey(), e);
+			}
+		}
+	}
+
+	private static ClientEntity parseClientEntity(JsonObject d) {
+		JsonObject scripts = d.has("scripts") ? d.getAsJsonObject("scripts") : new JsonObject();
+		return new ClientEntity(
+				d.get("identifier").getAsString(),
+				stringMap(d.getAsJsonObject("geometry")),
+				stringMap(d.getAsJsonObject("textures")),
+				stringMap(d.getAsJsonObject("materials")),
+				stringMap(d.getAsJsonObject("animations")),
+				stringList(scripts.get("initialize")),
+				stringList(scripts.get("pre_animation")),
+				scripts.has("scale") ? molang(scripts.get("scale")) : "1",
+				controllerRefs(d.get("render_controllers")),
+				controllerRefs(scripts.get("animate")));
+	}
+
+	private static RenderController parseRenderController(JsonObject rc) {
+		Map<String, List<String>> arrays = new HashMap<>();
+		if (rc.has("arrays")) {
+			for (Map.Entry<String, JsonElement> kind : rc.getAsJsonObject("arrays").entrySet()) {
+				for (Map.Entry<String, JsonElement> array : kind.getValue().getAsJsonObject().entrySet()) {
+					String name = array.getKey().toLowerCase(Locale.ROOT);
+					arrays.put(name.startsWith("array.") ? name.substring(6) : name, stringList(array.getValue()));
+				}
+			}
+		}
+		return new RenderController(
+				Map.copyOf(arrays),
+				rc.has("geometry") ? molang(rc.get("geometry")) : "Geometry.default",
+				stringList(rc.get("textures")),
+				bonePatterns(rc.get("materials")),
+				bonePatterns(rc.get("part_visibility")));
+	}
+
+	/** Keys lower-cased: Molang identifiers are case-insensitive. */
+	private static Map<String, String> stringMap(JsonObject obj) {
+		Map<String, String> out = new HashMap<>();
+		if (obj != null) {
+			obj.entrySet().forEach(e -> out.put(e.getKey().toLowerCase(Locale.ROOT), molang(e.getValue())));
+		}
+		return Map.copyOf(out);
+	}
+
+	private static List<String> stringList(JsonElement element) {
+		List<String> out = new ArrayList<>();
+		if (element == null) {
+			return out;
+		}
+		if (element.isJsonArray()) {
+			element.getAsJsonArray().forEach(e -> out.add(molang(e)));
+		} else {
+			out.add(molang(element));
+		}
+		return List.copyOf(out);
+	}
+
+	/** Entries are either a bare name or {@code {"name": "condition"}}. */
+	private static List<ControllerRef> controllerRefs(JsonElement element) {
+		List<ControllerRef> out = new ArrayList<>();
+		if (element instanceof JsonArray array) {
+			for (JsonElement e : array) {
+				if (e.isJsonObject()) {
+					e.getAsJsonObject().entrySet().forEach(c -> out.add(new ControllerRef(c.getKey(), molang(c.getValue()))));
+				} else {
+					out.add(new ControllerRef(e.getAsString(), null));
+				}
+			}
+		}
+		return List.copyOf(out);
+	}
+
+	private static List<BonePattern> bonePatterns(JsonElement element) {
+		List<BonePattern> out = new ArrayList<>();
+		if (element instanceof JsonArray array) {
+			for (JsonElement e : array) {
+				e.getAsJsonObject().entrySet().forEach(p -> out.add(new BonePattern(p.getKey(), molang(p.getValue()))));
+			}
+		}
+		return List.copyOf(out);
+	}
+
+	/** JSON booleans/numbers are valid Molang constants too. */
+	private static String molang(JsonElement e) {
+		if (e.isJsonPrimitive() && e.getAsJsonPrimitive().isBoolean()) {
+			return e.getAsBoolean() ? "1" : "0";
+		}
+		return e.getAsString();
+	}
+}

@@ -17,6 +17,11 @@ import java.util.Map;
 public final class ConverterCli {
 	/** Resource pack format for Minecraft 26.2 (see the client jar's version.json: pack_version.resource_major). */
 	private static final int PACK_FORMAT = 88;
+	/**
+	 * Bump whenever the converter's output changes shape, so packs converted by
+	 * an older version of the mod get re-converted automatically.
+	 */
+	public static final int SCHEMA_VERSION = 2;
 
 	private ConverterCli() {
 	}
@@ -55,6 +60,7 @@ public final class ConverterCli {
 		int soundCount = SoundConverter.convert(addon.resourcePack, assetsDir);
 		int langKeyCount = LangConverter.convert(addon.resourcePack, assetsDir);
 		int itemCount = ItemConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
+		int bedrockFileCount = BedrockDataConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
 
 		List<String> skipped = new ArrayList<>();
 		if (addon.behaviorPack != null) {
@@ -72,6 +78,7 @@ public final class ConverterCli {
 		System.out.println("Sounds copied: " + soundCount);
 		System.out.println("Lang keys converted: " + langKeyCount);
 		System.out.println("Item icons/models converted: " + itemCount);
+		System.out.println("Bedrock definition files carried over: " + bedrockFileCount);
 		System.out.println("Skipped (behavior logic, ported later): " + skipped.size() + " files - see skip-report.txt");
 	}
 
@@ -90,7 +97,7 @@ public final class ConverterCli {
 			Map<String, String> animationIndex, int textureCount, int soundCount, int langKeyCount,
 			List<String> skipped) throws IOException {
 		JsonObject manifest = new JsonObject();
-		manifest.addProperty("converterSchemaVersion", 1);
+		manifest.addProperty("converterSchemaVersion", SCHEMA_VERSION);
 
 		JsonObject counts = new JsonObject();
 		counts.addProperty("geometries", geometryIndex.size());

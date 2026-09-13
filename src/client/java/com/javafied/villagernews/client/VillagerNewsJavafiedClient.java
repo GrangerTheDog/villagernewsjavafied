@@ -1,29 +1,40 @@
 package com.javafied.villagernews.client;
 
-import com.javafied.villagernews.client.geckolib.VillagerReplacement;
-import com.javafied.villagernews.client.geckolib.VillagerReplacementGeoModel;
-import com.javafied.villagernews.client.geckolib.WoolySheepGeoModel;
-import com.javafied.villagernews.client.geckolib.WoolySheepReplacement;
-
-import com.geckolib.renderer.GeoReplacedEntityRenderer;
+import com.javafied.villagernews.VillagerNewsJavafied;
+import com.javafied.villagernews.client.bedrock.BedrockAnimatable;
+import com.javafied.villagernews.client.bedrock.BedrockDefinitions;
+import com.javafied.villagernews.client.bedrock.BedrockEntityRenderer;
+import com.javafied.villagernews.client.bedrock.BedrockGeoModel;
+import com.javafied.villagernews.content.ModAttachments;
+import com.javafied.villagernews.content.VillagerVariantKeys;
+import com.javafied.villagernews.molang.MolangProgram;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.world.entity.EntityTypes;
 
 public class VillagerNewsJavafiedClient implements ClientModInitializer {
+	/** The add-on's one sheep reskin. Hand-picked for now; mapping vanilla mobs to reskins from the manifest comes later. */
+	private static final String SHEEP_CLIENT_ENTITY = "mlkxjo";
+
 	private boolean promptedThisSession = false;
 
 	@Override
 	public void onInitializeClient() {
-		EntityRendererRegistry.register(EntityTypes.SHEEP,
-				context -> new GeoReplacedEntityRenderer<>(context, new WoolySheepGeoModel(), WoolySheepReplacement.INSTANCE));
-		EntityRendererRegistry.register(EntityTypes.VILLAGER,
-				context -> new GeoReplacedEntityRenderer<>(context, new VillagerReplacementGeoModel(), VillagerReplacement.INSTANCE));
+		MolangProgram.setErrorReporter(VillagerNewsJavafied.LOGGER::warn);
+		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(BedrockDefinitions.ID, new BedrockDefinitions());
+
+		EntityRendererRegistry.register(EntityTypes.SHEEP, context -> new BedrockEntityRenderer<>(context,
+				new BedrockGeoModel(entity -> SHEEP_CLIENT_ENTITY), new BedrockAnimatable()));
+		EntityRendererRegistry.register(EntityTypes.VILLAGER, context -> new BedrockEntityRenderer<>(context,
+				new BedrockGeoModel(entity -> entity.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT)),
+				new BedrockAnimatable()));
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			if (AddonConversionManager.isConverted()) {

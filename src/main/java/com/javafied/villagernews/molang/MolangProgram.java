@@ -1,7 +1,14 @@
 package com.javafied.villagernews.molang;
 
 import team.unnamed.mocha.parser.MolangParser;
+import team.unnamed.mocha.parser.ast.AccessExpression;
+import team.unnamed.mocha.parser.ast.ArrayAccessExpression;
+import team.unnamed.mocha.parser.ast.BinaryExpression;
+import team.unnamed.mocha.parser.ast.CallExpression;
+import team.unnamed.mocha.parser.ast.ExecutionScopeExpression;
 import team.unnamed.mocha.parser.ast.Expression;
+import team.unnamed.mocha.parser.ast.TernaryConditionalExpression;
+import team.unnamed.mocha.parser.ast.UnaryExpression;
 import team.unnamed.mocha.runtime.ExpressionInterpreter;
 import team.unnamed.mocha.runtime.Scope;
 import team.unnamed.mocha.runtime.binding.JavaObjectBinding;
@@ -45,7 +52,7 @@ public final class MolangProgram {
 	public static MolangProgram of(String source) {
 		return CACHE.computeIfAbsent(source, s -> {
 			try {
-				return new MolangProgram(MolangParser.parseAll(s));
+				return new MolangProgram(MolangParser.parseAll(s).stream().map(MolangProgram::fixAssignmentPrecedence).toList());
 			} catch (Exception e) {
 				errorReporter.accept("Unparseable Molang (" + e.getMessage() + "): " + s);
 				return ZERO;
@@ -83,6 +90,54 @@ public final class MolangProgram {
 
 	public boolean evalBoolean(Scope scope) {
 		return eval(scope).getAsBoolean();
+	}
+
+	/**
+	 * mocha parses {@code v.x = c ? a : b} as {@code (v.x = c) ? a : b}, so
+	 * {@code v.x} ends up holding the condition (verified: {@code v.x = 0 < 15 ? 7 : 3}
+	 * leaves v.x at 1). In Molang, as in C, assignment binds loosest. 35 of the
+	 * add-on's expressions have this shape - including the ones picking the
+	 * villager skin, biome hat and profession - so the tree is rewritten to
+	 * {@code v.x = (c ? a : b)} (and likewise for the else-less {@code c ? a}).
+	 */
+	static Expression fixAssignmentPrecedence(Expression e) {
+		if (e instanceof TernaryConditionalExpression t) {
+			Expression condition = fixAssignmentPrecedence(t.condition());
+			Expression whenTrue = fixAssignmentPrecedence(t.trueExpression());
+			Expression whenFalse = fixAssignmentPrecedence(t.falseExpression());
+			if (condition instanceof BinaryExpression assign && assign.op() == BinaryExpression.Op.ASSIGN) {
+				return new BinaryExpression(BinaryExpression.Op.ASSIGN, assign.left(),
+						new TernaryConditionalExpression(assign.right(), whenTrue, whenFalse));
+			}
+			return new TernaryConditionalExpression(condition, whenTrue, whenFalse);
+		}
+		if (e instanceof BinaryExpression b) {
+			Expression left = fixAssignmentPrecedence(b.left());
+			Expression right = fixAssignmentPrecedence(b.right());
+			if (b.op() == BinaryExpression.Op.CONDITIONAL
+					&& left instanceof BinaryExpression assign && assign.op() == BinaryExpression.Op.ASSIGN) {
+				return new BinaryExpression(BinaryExpression.Op.ASSIGN, assign.left(),
+						new BinaryExpression(BinaryExpression.Op.CONDITIONAL, assign.right(), right));
+			}
+			return new BinaryExpression(b.op(), left, right);
+		}
+		if (e instanceof UnaryExpression u) {
+			return new UnaryExpression(u.op(), fixAssignmentPrecedence(u.expression()));
+		}
+		if (e instanceof ExecutionScopeExpression scope) {
+			return new ExecutionScopeExpression(scope.expressions().stream().map(MolangProgram::fixAssignmentPrecedence).toList());
+		}
+		if (e instanceof CallExpression call) {
+			return new CallExpression(fixAssignmentPrecedence(call.function()),
+					call.arguments().stream().map(MolangProgram::fixAssignmentPrecedence).toList());
+		}
+		if (e instanceof ArrayAccessExpression access) {
+			return new ArrayAccessExpression(fixAssignmentPrecedence(access.array()), fixAssignmentPrecedence(access.index()));
+		}
+		if (e instanceof AccessExpression access) {
+			return new AccessExpression(fixAssignmentPrecedence(access.object()), access.property());
+		}
+		return e;
 	}
 
 	/**

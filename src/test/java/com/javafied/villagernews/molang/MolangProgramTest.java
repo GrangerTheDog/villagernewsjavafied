@@ -102,6 +102,22 @@ class MolangProgramTest {
 	}
 
 	@Test
+	void assignmentBindsLooserThanConditionals() {
+		MutableObjectBinding v = new MutableObjectBinding();
+		Scope scope = MolangProgram.newScope();
+		scope.set("v", v);
+		MolangProgram.of("v.a = 0 < 15 ? 7 : 3;").eval(scope);
+		assertEquals(7, v.get("a").getAsNumber(), "mocha alone would store the condition (1) here");
+		// Shape of the add-on's biome-hat script: nested ternary whose else is an else-less conditional.
+		MolangProgram.of("v.b = 0 ? 4 : 1 ? 6;").eval(scope);
+		assertEquals(6, v.get("b").getAsNumber());
+		MolangProgram.of("1 ? { v.c = 0 ? 2 : 3; };").eval(scope);
+		assertEquals(3, v.get("c").getAsNumber(), "fixed inside blocks too");
+		MolangProgram.of("v.d = Math.abs(0 ? 1 : -5);").eval(scope);
+		assertEquals(5, v.get("d").getAsNumber(), "and inside call arguments");
+	}
+
+	@Test
 	void scriptsWriteVariablesAndTemps() {
 		MutableObjectBinding variables = new MutableObjectBinding();
 		Scope scope = MolangProgram.newScope();
