@@ -54,6 +54,7 @@ public final class ConverterCli {
 		int textureCount = TextureConverter.convert(addon.resourcePack, assetsDir);
 		int soundCount = SoundConverter.convert(addon.resourcePack, assetsDir);
 		int langKeyCount = LangConverter.convert(addon.resourcePack, assetsDir);
+		int itemCount = ItemConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
 
 		List<String> skipped = new ArrayList<>();
 		if (addon.behaviorPack != null) {
@@ -70,6 +71,7 @@ public final class ConverterCli {
 		System.out.println("Textures converted: " + textureCount);
 		System.out.println("Sounds copied: " + soundCount);
 		System.out.println("Lang keys converted: " + langKeyCount);
+		System.out.println("Item icons/models converted: " + itemCount);
 		System.out.println("Skipped (behavior logic, ported later): " + skipped.size() + " files - see skip-report.txt");
 	}
 

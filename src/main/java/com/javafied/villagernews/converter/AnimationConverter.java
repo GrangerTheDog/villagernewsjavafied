@@ -44,6 +44,7 @@ public final class AnimationConverter {
 					continue;
 				}
 				normalizeRelativeTo(animations);
+				normalizeKeyframeLists(animations);
 				String formatVersion = root.has("format_version") ? root.get("format_version").getAsString() : "1.10.0";
 
 				for (String animationName : animations.keySet()) {
@@ -62,6 +63,51 @@ public final class AnimationConverter {
 			}
 		}
 		return animationToPath;
+	}
+
+	/**
+	 * Bedrock lets a single keyframe carry a list: several Molang statements in
+	 * a {@code timeline} entry, or several effects in a {@code particle_effects}
+	 * / {@code sound_effects} entry. GeckoLib only accepts one value per
+	 * keyframe and rejects the whole file otherwise (2234 of this add-on's
+	 * 2512 animations). Timeline statements are joined into one Molang string,
+	 * which is equivalent; for effect lists only the first effect survives.
+	 */
+	private static void normalizeKeyframeLists(JsonObject animations) {
+		for (String animationName : animations.keySet()) {
+			JsonObject animation = animations.getAsJsonObject(animationName);
+			collapseLists(animation.getAsJsonObject("timeline"), true);
+			collapseLists(animation.getAsJsonObject("particle_effects"), false);
+			collapseLists(animation.getAsJsonObject("sound_effects"), false);
+		}
+	}
+
+	private static void collapseLists(JsonObject keyframes, boolean joinAsMolang) {
+		if (keyframes == null) {
+			return;
+		}
+		for (String time : keyframes.keySet()) {
+			JsonElement value = keyframes.get(time);
+			if (!value.isJsonArray()) {
+				continue;
+			}
+			var list = value.getAsJsonArray();
+			if (list.isEmpty()) {
+				keyframes.remove(time);
+			} else if (joinAsMolang) {
+				StringBuilder joined = new StringBuilder();
+				for (JsonElement statement : list) {
+					String s = statement.getAsString().strip();
+					joined.append(s);
+					if (!s.endsWith(";")) {
+						joined.append(';');
+					}
+				}
+				keyframes.addProperty(time, joined.toString());
+			} else {
+				keyframes.add(time, list.get(0));
+			}
+		}
 	}
 
 	/**

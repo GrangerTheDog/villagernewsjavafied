@@ -28,26 +28,46 @@ public final class TextureConverter {
 		int count = 0;
 
 		try (var stream = Files.walk(texturesDir)) {
-			for (Path file : stream.filter(Files::isRegularFile).toList()) {
+			for (Path file : stream.filter(Files::isRegularFile).filter(TextureConverter::isImage).toList()) {
 				String name = file.getFileName().toString();
-				String lower = name.toLowerCase(Locale.ROOT);
-				Path relativeDir = texturesDir.relativize(file.getParent());
-				Path targetDir = outDir.resolve(relativeDir);
-				Files.createDirectories(targetDir);
-
-				if (lower.endsWith(".png")) {
-					BufferedImage image = toArgb(ImageIO.read(file.toFile()));
-					ImageIO.write(image, "png", targetDir.resolve(name).toFile());
-					count++;
-				} else if (lower.endsWith(".tga")) {
-					BufferedImage image = TgaImage.read(file);
-					String pngName = name.substring(0, name.length() - 4) + ".png";
-					ImageIO.write(image, "png", targetDir.resolve(pngName).toFile());
-					count++;
-				}
+				String pngName = name.substring(0, name.lastIndexOf('.')) + ".png";
+				Path target = outDir.resolve(texturesDir.relativize(file.getParent())).resolve(pngName);
+				writePng(read(file), target);
+				count++;
 			}
 		}
 		return count;
+	}
+
+	/**
+	 * Resolves a Bedrock texture reference, which never carries an extension
+	 * (e.g. "textures/oreville/vn/ean"), to the actual {@code .png}/{@code .tga}.
+	 */
+	public static Path find(Path resourcePack, String extensionlessPath) {
+		for (String ext : new String[] {".png", ".tga"}) {
+			Path candidate = resourcePack.resolve(extensionlessPath + ext);
+			if (Files.exists(candidate)) {
+				return candidate;
+			}
+		}
+		return null;
+	}
+
+	public static BufferedImage read(Path file) throws IOException {
+		if (file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".tga")) {
+			return TgaImage.read(file);
+		}
+		return toArgb(ImageIO.read(file.toFile()));
+	}
+
+	public static void writePng(BufferedImage image, Path target) throws IOException {
+		Files.createDirectories(target.getParent());
+		ImageIO.write(image, "png", target.toFile());
+	}
+
+	private static boolean isImage(Path file) {
+		String lower = file.getFileName().toString().toLowerCase(Locale.ROOT);
+		return lower.endsWith(".png") || lower.endsWith(".tga");
 	}
 
 	private static BufferedImage toArgb(BufferedImage source) {
