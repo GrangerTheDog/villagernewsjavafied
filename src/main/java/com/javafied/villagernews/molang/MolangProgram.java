@@ -7,6 +7,7 @@ import team.unnamed.mocha.parser.ast.BinaryExpression;
 import team.unnamed.mocha.parser.ast.CallExpression;
 import team.unnamed.mocha.parser.ast.ExecutionScopeExpression;
 import team.unnamed.mocha.parser.ast.Expression;
+import team.unnamed.mocha.parser.ast.IdentifierExpression;
 import team.unnamed.mocha.parser.ast.TernaryConditionalExpression;
 import team.unnamed.mocha.parser.ast.UnaryExpression;
 import team.unnamed.mocha.runtime.ExpressionInterpreter;
@@ -16,6 +17,7 @@ import team.unnamed.mocha.runtime.standard.MochaMath;
 import team.unnamed.mocha.runtime.value.Function;
 import team.unnamed.mocha.runtime.value.ObjectProperty;
 import team.unnamed.mocha.runtime.value.ObjectValue;
+import team.unnamed.mocha.runtime.value.StringValue;
 import team.unnamed.mocha.runtime.value.Value;
 
 import java.util.List;
@@ -36,6 +38,10 @@ public final class MolangProgram {
 	private static final Map<String, MolangProgram> CACHE = new ConcurrentHashMap<>();
 	private static final MolangProgram ZERO = new MolangProgram(List.of());
 	private static final ObjectValue MATH = new BedrockMath();
+	static final String EQUALS = "__villagernewsjavafied_equals";
+	static final String NOT_EQUALS = "__villagernewsjavafied_not_equals";
+	private static final Function<Object> EQUALS_FUNCTION = (ctx, args) -> Value.of(equal(args.next().eval(), args.next().eval()));
+	private static final Function<Object> NOT_EQUALS_FUNCTION = (ctx, args) -> Value.of(!equal(args.next().eval(), args.next().eval()));
 	private static volatile Consumer<String> errorReporter = message -> {
 	};
 
@@ -52,7 +58,7 @@ public final class MolangProgram {
 	public static MolangProgram of(String source) {
 		return CACHE.computeIfAbsent(source, s -> {
 			try {
-				return new MolangProgram(MolangParser.parseAll(s).stream().map(MolangProgram::fixAssignmentPrecedence).toList());
+				return new MolangProgram(MolangParser.parseAll(s).stream().map(MolangProgram::repair).toList());
 			} catch (Exception e) {
 				errorReporter.accept("Unparseable Molang (" + e.getMessage() + "): " + s);
 				return ZERO;
@@ -64,7 +70,17 @@ public final class MolangProgram {
 	public static Scope newScope() {
 		Scope scope = Scope.create();
 		scope.set("math", MATH);
+		scope.set(EQUALS, EQUALS_FUNCTION);
+		scope.set(NOT_EQUALS, NOT_EQUALS_FUNCTION);
 		return scope;
+	}
+
+	/** Bedrock equality: strings compare as text, anything else numerically. */
+	private static boolean equal(Value a, Value b) {
+		if (a instanceof StringValue || b instanceof StringValue) {
+			return a instanceof StringValue && b instanceof StringValue && a.getAsString().equals(b.getAsString());
+		}
+		return a.getAsNumber() == b.getAsNumber();
 	}
 
 	/**
@@ -93,18 +109,25 @@ public final class MolangProgram {
 	}
 
 	/**
-	 * mocha parses {@code v.x = c ? a : b} as {@code (v.x = c) ? a : b}, so
+	 * Rewrites a parsed tree where mocha deviates from Bedrock Molang:
+	 * <ul>
+	 * <li>mocha parses {@code v.x = c ? a : b} as {@code (v.x = c) ? a : b}, so
 	 * {@code v.x} ends up holding the condition (verified: {@code v.x = 0 < 15 ? 7 : 3}
 	 * leaves v.x at 1). In Molang, as in C, assignment binds loosest. 35 of the
 	 * add-on's expressions have this shape - including the ones picking the
-	 * villager skin, biome hat and profession - so the tree is rewritten to
-	 * {@code v.x = (c ? a : b)} (and likewise for the else-less {@code c ? a}).
+	 * villager skin, biome hat and profession - so it becomes
+	 * {@code v.x = (c ? a : b)} (likewise for the else-less {@code c ? a}).</li>
+	 * <li>mocha compares strings by their numeric value (0), so
+	 * {@code 'none' == 'ufernq'} is true. That hid every villager's hat bone -
+	 * where most job outfits are. {@code ==}/{@code !=} become calls to
+	 * {@link #EQUALS}/{@link #NOT_EQUALS}, bound in every {@link #newScope()}.</li>
+	 * </ul>
 	 */
-	static Expression fixAssignmentPrecedence(Expression e) {
+	static Expression repair(Expression e) {
 		if (e instanceof TernaryConditionalExpression t) {
-			Expression condition = fixAssignmentPrecedence(t.condition());
-			Expression whenTrue = fixAssignmentPrecedence(t.trueExpression());
-			Expression whenFalse = fixAssignmentPrecedence(t.falseExpression());
+			Expression condition = repair(t.condition());
+			Expression whenTrue = repair(t.trueExpression());
+			Expression whenFalse = repair(t.falseExpression());
 			if (condition instanceof BinaryExpression assign && assign.op() == BinaryExpression.Op.ASSIGN) {
 				return new BinaryExpression(BinaryExpression.Op.ASSIGN, assign.left(),
 						new TernaryConditionalExpression(assign.right(), whenTrue, whenFalse));
@@ -112,30 +135,34 @@ public final class MolangProgram {
 			return new TernaryConditionalExpression(condition, whenTrue, whenFalse);
 		}
 		if (e instanceof BinaryExpression b) {
-			Expression left = fixAssignmentPrecedence(b.left());
-			Expression right = fixAssignmentPrecedence(b.right());
+			Expression left = repair(b.left());
+			Expression right = repair(b.right());
 			if (b.op() == BinaryExpression.Op.CONDITIONAL
 					&& left instanceof BinaryExpression assign && assign.op() == BinaryExpression.Op.ASSIGN) {
 				return new BinaryExpression(BinaryExpression.Op.ASSIGN, assign.left(),
 						new BinaryExpression(BinaryExpression.Op.CONDITIONAL, assign.right(), right));
 			}
+			if (b.op() == BinaryExpression.Op.EQ || b.op() == BinaryExpression.Op.NEQ) {
+				return new CallExpression(new IdentifierExpression(b.op() == BinaryExpression.Op.EQ ? EQUALS : NOT_EQUALS),
+						List.of(left, right));
+			}
 			return new BinaryExpression(b.op(), left, right);
 		}
 		if (e instanceof UnaryExpression u) {
-			return new UnaryExpression(u.op(), fixAssignmentPrecedence(u.expression()));
+			return new UnaryExpression(u.op(), repair(u.expression()));
 		}
 		if (e instanceof ExecutionScopeExpression scope) {
-			return new ExecutionScopeExpression(scope.expressions().stream().map(MolangProgram::fixAssignmentPrecedence).toList());
+			return new ExecutionScopeExpression(scope.expressions().stream().map(MolangProgram::repair).toList());
 		}
 		if (e instanceof CallExpression call) {
-			return new CallExpression(fixAssignmentPrecedence(call.function()),
-					call.arguments().stream().map(MolangProgram::fixAssignmentPrecedence).toList());
+			return new CallExpression(repair(call.function()),
+					call.arguments().stream().map(MolangProgram::repair).toList());
 		}
 		if (e instanceof ArrayAccessExpression access) {
-			return new ArrayAccessExpression(fixAssignmentPrecedence(access.array()), fixAssignmentPrecedence(access.index()));
+			return new ArrayAccessExpression(repair(access.array()), repair(access.index()));
 		}
 		if (e instanceof AccessExpression access) {
-			return new AccessExpression(fixAssignmentPrecedence(access.object()), access.property());
+			return new AccessExpression(repair(access.object()), access.property());
 		}
 		return e;
 	}

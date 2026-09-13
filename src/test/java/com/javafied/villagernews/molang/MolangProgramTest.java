@@ -99,6 +99,14 @@ class MolangProgramTest {
 		assertEquals(1, MolangProgram.of("q.any(q.mark_variant, 0, 2, 5)").evalNumber(scope));
 		assertEquals(0, MolangProgram.of("q.any(q.mark_variant, 4, 6)").evalNumber(scope));
 		assertEquals(0, MolangProgram.of("v.epwebi != 'ufernq'").evalNumber(scope));
+		// The villager hat-bone rule: mocha alone says 'none' == 'ufernq' (both are "0" numerically).
+		variables.set("epwebi", StringValue.of("none"));
+		assertEquals(1, MolangProgram.of("v.epwebi != 'ufernq'").evalNumber(scope));
+		assertEquals(0, MolangProgram.of("v.epwebi == 'ufernq'").evalNumber(scope));
+		assertEquals(1, MolangProgram.of("2 == 2").evalNumber(scope));
+		assertEquals(0, MolangProgram.of("2 != 2").evalNumber(scope));
+		MolangProgram.of("1 ? { v.hat = v.epwebi != 'ufernq'; };").eval(scope);
+		assertEquals(1, variables.get("hat").getAsNumber(), "also inside blocks");
 	}
 
 	@Test

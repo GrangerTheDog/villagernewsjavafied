@@ -91,6 +91,7 @@ class BedrockRuntimeTest {
 		assertEquals("textures/oreville/vn/dil.png", plan.layers().getFirst().texture().getPath(),
 				"normal adult villagers use the dil skin, not a special-state one");
 		assertEquals(0.9375f, plan.scale(), 1e-6);
+		assertTrue(plan.isBoneVisible("hat"), "the hat bone carries most job outfits");
 		assertTexturesExist(plan);
 	}
 
