@@ -1,5 +1,7 @@
 package com.javafied.villagernews.client;
 
+import com.javafied.villagernews.client.geckolib.VillagerReplacement;
+import com.javafied.villagernews.client.geckolib.VillagerReplacementGeoModel;
 import com.javafied.villagernews.client.geckolib.WoolySheepGeoModel;
 import com.javafied.villagernews.client.geckolib.WoolySheepReplacement;
 
@@ -20,6 +22,8 @@ public class VillagerNewsJavafiedClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		EntityRendererRegistry.register(EntityTypes.SHEEP,
 				context -> new GeoReplacedEntityRenderer<>(context, new WoolySheepGeoModel(), WoolySheepReplacement.INSTANCE));
+		EntityRendererRegistry.register(EntityTypes.VILLAGER,
+				context -> new GeoReplacedEntityRenderer<>(context, new VillagerReplacementGeoModel(), VillagerReplacement.INSTANCE));
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			if (AddonConversionManager.isConverted()) {

@@ -1,6 +1,8 @@
 package com.javafied.villagernews;
 
+import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
+import com.javafied.villagernews.content.VillagerCommand;
 
 import net.fabricmc.api.ModInitializer;
 
@@ -17,7 +19,9 @@ public class VillagerNewsJavafied implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		LOGGER.info("Villager News: Javafied initializing");
+		ModAttachments.init();
 		ModItems.init();
+		VillagerCommand.init();
 	}
 
 	public static Identifier id(String path) {
