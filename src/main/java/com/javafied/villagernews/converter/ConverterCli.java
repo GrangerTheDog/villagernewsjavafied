@@ -21,7 +21,7 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 3;
+	public static final int SCHEMA_VERSION = 4;
 
 	private ConverterCli() {
 	}
@@ -124,7 +124,9 @@ public final class ConverterCli {
 	private static void writePackMcmeta(Path outputDir) throws IOException {
 		JsonObject pack = new JsonObject();
 		pack.addProperty("description", "Villager News: Javafied (converted from your own Bedrock add-on)");
-		pack.addProperty("pack_format", PACK_FORMAT);
+		// Formats above 64 must declare a supported range instead of a bare pack_format.
+		pack.addProperty("min_format", PACK_FORMAT);
+		pack.addProperty("max_format", PACK_FORMAT);
 		JsonObject root = new JsonObject();
 		root.add("pack", pack);
 		ConverterUtil.writeJson(outputDir.resolve("pack.mcmeta"), root);

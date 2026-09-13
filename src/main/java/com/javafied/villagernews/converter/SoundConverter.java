@@ -59,7 +59,8 @@ public final class SoundConverter {
 				Files.createDirectories(dstOgg.getParent());
 				Files.copy(srcOgg, dstOgg, StandardCopyOption.REPLACE_EXISTING);
 				copied++;
-				outSoundList.add(withoutPrefix);
+				// Unqualified names in sounds.json resolve to minecraft:, not to this pack's namespace.
+				outSoundList.add(ConverterUtil.MOD_ID + ":" + withoutPrefix);
 			}
 
 			outDefinition.add("sounds", outSoundList);
