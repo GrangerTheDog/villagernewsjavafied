@@ -28,6 +28,7 @@ public final class BedrockDataConverter {
 		count += copyDir(resourcePack.resolve("entity"), outDir.resolve("entity"), ".json");
 		count += copyDir(resourcePack.resolve("render_controllers"), outDir.resolve("render_controllers"), ".json");
 		count += copyDir(resourcePack.resolve("animation_controllers"), outDir.resolve("animation_controllers"), ".json");
+		count += copyDir(resourcePack.resolve("animations"), outDir.resolve("animations"), ".json");
 		count += copyDir(resourcePack.resolve("materials"), outDir.resolve("materials"), ".material");
 		if (behaviorPack != null) {
 			writePropertyDefaults(behaviorPack.resolve("entities"), outDir.resolve("properties.json"));

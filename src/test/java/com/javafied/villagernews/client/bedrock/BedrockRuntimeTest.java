@@ -38,7 +38,8 @@ class BedrockRuntimeTest {
 		Path bedrock = ASSETS.resolve("bedrock");
 		assumeTrue(Files.isDirectory(bedrock), "run ./gradlew runConverter first");
 		defs = BedrockDefinitions.parse(read(bedrock.resolve("entity")), read(bedrock.resolve("render_controllers")),
-				read(bedrock.resolve("materials")), List.of(json(bedrock.resolve("properties.json"))));
+				read(bedrock.resolve("materials")), List.of(json(bedrock.resolve("properties.json"))),
+				read(bedrock.resolve("animations")), read(bedrock.resolve("animation_controllers")));
 	}
 
 	/** An adult, plains-biome farmer with skin 2 - what a freshly spawned vanilla villager could look like. */
@@ -77,7 +78,7 @@ class BedrockRuntimeTest {
 
 	private static RenderPlan plan(String path, int profession) {
 		BedrockDefinitions.ClientEntity ce = defs.clientEntity(path);
-		RenderPlan plan = BedrockRuntime.plan(defs, ce, new MutableObjectBinding(), true, queries(ce.identifier(), profession));
+		RenderPlan plan = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), profession), 0);
 		System.out.println(path + " (profession " + profession + "): scale " + plan.scale());
 		plan.layers().forEach(layer -> System.out.println("  " + layer));
 		return plan;
@@ -113,6 +114,43 @@ class BedrockRuntimeTest {
 			assertFalse(plan.layers().isEmpty(), variant + " produced no layers");
 			assertTexturesExist(plan);
 		}
+	}
+
+	@Test
+	void villagerAnimatesWhileWalkingAndLooking() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		MutableObjectBinding q = queries(ce.identifier(), 1);
+		q.set("is_on_ground", Value.of(1));
+		q.set("modified_move_speed", Value.of(0.8));
+		q.set("target_x_rotation", Value.of(30));
+		q.set("target_y_rotation", Value.of(25));
+		BedrockRuntime.EntityState state = new BedrockRuntime.EntityState();
+		RenderPlan plan = null;
+		for (int frame = 0; frame <= 40; frame++) {
+			double time = frame * 0.05;
+			q.set("life_time", Value.of(time));
+			plan = BedrockRuntime.plan(defs, ce, state, time, q, 0);
+		}
+		System.out.println("posed bones after 2s: " + plan.poses().size());
+		plan.poses().entrySet().stream().sorted(Map.Entry.comparingByKey()).limit(40).forEach(e -> {
+			BedrockRuntime.Pose p = e.getValue();
+			System.out.printf("  %-18s rot(%7.2f %7.2f %7.2f) pos(%6.2f %6.2f %6.2f) scale(%4.2f %4.2f %4.2f)%n",
+					e.getKey(), p.rx, p.ry, p.rz, p.px, p.py, p.pz, p.sx, p.sy, p.sz);
+		});
+		assertFalse(plan.poses().isEmpty(), "nothing animated");
+		for (BedrockRuntime.Pose p : plan.poses().values()) {
+			for (double v : new double[] {p.rx, p.ry, p.rz, p.px, p.py, p.pz, p.sx, p.sy, p.sz}) {
+				assertTrue(Double.isFinite(v), "non-finite bone value");
+			}
+		}
+		assertTrue(plan.poses().values().stream().anyMatch(p -> Math.abs(p.rx) + Math.abs(p.ry) > 1),
+				"expected the head/body to turn towards the target");
+
+		// The addon's "offset" animation drops the root to undo the script's puppet teleport;
+		// with the ported lift applied, the model should end up standing on the villager's own feet.
+		double rootDropWorldPixels = plan.poses().get("root").py * plan.scale();
+		assertEquals(0, rootDropWorldPixels + VillagerPuppetPort.ADULT_LIFT * 16, 1.0,
+				"offset animation and puppet lift should cancel out");
 	}
 
 	private static void assertTexturesExist(RenderPlan plan) {

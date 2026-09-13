@@ -36,11 +36,14 @@ final class EntityQueries implements ObjectValue {
 	private final Entity entity;
 	private final float partialTick;
 	private final Map<String, JsonElement> properties;
+	/** Property values the add-on's script would have written (see {@link VillagerPuppetPort}); win over defaults. */
+	private final Map<String, Value> propertyOverrides;
 
-	EntityQueries(Entity entity, float partialTick, Map<String, JsonElement> properties) {
+	EntityQueries(Entity entity, float partialTick, Map<String, JsonElement> properties, Map<String, Value> propertyOverrides) {
 		this.entity = entity;
 		this.partialTick = partialTick;
 		this.properties = properties;
+		this.propertyOverrides = propertyOverrides;
 	}
 
 	@Override
@@ -83,7 +86,10 @@ final class EntityQueries implements ObjectValue {
 			case "mark_variant" -> Value.of(villager() == null ? 0 : indexOf(BIOMES, keyPath(villager().type().unwrapKey())));
 			case "trade_tier" -> Value.of(villager() == null ? 0 : villager().level() - 1);
 			case "property" -> function(args -> propertyValue(args.next().eval().getAsString()));
-			case "has_property" -> function(args -> Value.of(properties.containsKey(args.next().eval().getAsString())));
+			case "has_property" -> function(args -> {
+				String property = args.next().eval().getAsString();
+				return Value.of(propertyOverrides.containsKey(property) || properties.containsKey(property));
+			});
 			case "is_name_any" -> function(args -> {
 				String customName = entity.getCustomName() == null ? null : entity.getCustomName().getString();
 				for (int i = 0; i < args.length(); i++) {
@@ -114,6 +120,10 @@ final class EntityQueries implements ObjectValue {
 	}
 
 	private Value propertyValue(String property) {
+		Value override = propertyOverrides.get(property);
+		if (override != null) {
+			return override;
+		}
 		JsonElement value = properties.get(property);
 		if (value == null || !value.isJsonPrimitive()) {
 			return Value.nil();

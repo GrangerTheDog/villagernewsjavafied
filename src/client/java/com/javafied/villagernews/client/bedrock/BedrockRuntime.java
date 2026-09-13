@@ -1,6 +1,12 @@
 package com.javafied.villagernews.client.bedrock;
 
 import com.javafied.villagernews.VillagerNewsJavafied;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.Animation;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.AnimationRef;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.BoneAnimation;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.Controller;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.State;
+import com.javafied.villagernews.client.bedrock.BedrockAnimations.Transition;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.BonePattern;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.ClientEntity;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.ControllerRef;
@@ -20,18 +26,22 @@ import team.unnamed.mocha.runtime.value.StringValue;
 import team.unnamed.mocha.runtime.value.Value;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
  * Runs an add-on client entity's own logic for a Java entity, once per frame:
  * {@code initialize} scripts the first time, {@code pre_animation} scripts
- * every frame, then each render controller - producing a {@link RenderPlan}
- * (which geometry, which textures in which order, which bones hidden).
- * Entity variables ({@code v.*}) persist per entity between frames, like in
- * Bedrock.
+ * every frame, then its render controllers and animations - producing a
+ * {@link RenderPlan}: which geometry and textures to draw in which order,
+ * which bones are hidden, and how every bone is posed. Entity variables
+ * ({@code v.*}), controller states and animation times persist per entity
+ * between frames, like in Bedrock.
  */
 public final class BedrockRuntime {
 	/** One textured pass over the model: Bedrock renders a render controller once per texture it lists. */
@@ -41,7 +51,17 @@ public final class BedrockRuntime {
 	public record BoneVisibility(BonePattern pattern, boolean visible) {
 	}
 
-	public record RenderPlan(List<Layer> layers, List<BoneVisibility> boneVisibility, float scale) {
+	/** A bone's animated offset from its bind pose, in Bedrock units (degrees, pixels). */
+	public static final class Pose {
+		public double rx, ry, rz, px, py, pz, sx = 1, sy = 1, sz = 1;
+	}
+
+	/**
+	 * @param poses keyed by lower-case bone name (Bedrock bone names are case-insensitive)
+	 * @param lift  blocks to raise the whole model by (see {@link VillagerPuppetPort#lift})
+	 */
+	public record RenderPlan(List<Layer> layers, List<BoneVisibility> boneVisibility, Map<String, Pose> poses, float scale,
+			float lift) {
 		public boolean isBoneVisible(String bone) {
 			boolean visible = true;
 			for (BoneVisibility rule : boneVisibility) {
@@ -53,9 +73,34 @@ public final class BedrockRuntime {
 		}
 	}
 
-	private static final class EntityState {
+	/** Everything that persists for one entity between frames. */
+	public static final class EntityState {
 		final MutableObjectBinding variables = new MutableObjectBinding();
+		final Map<String, ControllerState> controllers = new HashMap<>();
+		final Map<String, AnimationState> animations = new HashMap<>();
 		String clientEntity;
+		double lastTime = Double.NaN;
+
+		public MutableObjectBinding variables() {
+			return variables;
+		}
+	}
+
+	private static final class ControllerState {
+		String state;
+		double enteredAt;
+
+		ControllerState(String state, double enteredAt) {
+			this.state = state;
+			this.enteredAt = enteredAt;
+		}
+	}
+
+	private static final class AnimationState {
+		double time;
+		/** Timeline events up to (and including) this time have fired; below 0 so a key at 0 fires on start. */
+		double firedUpTo = -1;
+		boolean finished;
 	}
 
 	// Render-thread only. Weak keys: state goes away with the entity.
@@ -71,24 +116,39 @@ public final class BedrockRuntime {
 		if (ce == null) {
 			return null;
 		}
-
 		EntityState state = STATES.computeIfAbsent(entity, e -> new EntityState());
-		boolean firstFrame = !ce.identifier().equals(state.clientEntity);
-		state.clientEntity = ce.identifier();
-		return plan(defs, ce, state.variables, firstFrame,
-				new EntityQueries(entity, partialTick, defs.properties(ce.identifier())));
+		boolean puppet = ce.identifier().endsWith(":" + VillagerPuppetPort.PUPPET);
+		EntityQueries queries = new EntityQueries(entity, partialTick, defs.properties(ce.identifier()),
+				puppet ? VillagerPuppetPort.hostDrivenProperties(entity) : Map.of());
+		return plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
+				puppet ? VillagerPuppetPort.lift(entity) : 0);
 	}
 
 	/**
-	 * The entity-independent core: runs the client entity's scripts against
-	 * {@code variables} (its persistent {@code v.*}) and {@code queries}, then
-	 * its render controllers.
+	 * The entity-independent core, so it can run against the real add-on data
+	 * in tests.
+	 *
+	 * @param lifeTime seconds since the entity appeared; drives animation time
+	 * @param lift     blocks to raise the model by, see {@link RenderPlan}
 	 */
-	public static RenderPlan plan(BedrockDefinitions.Snapshot defs, ClientEntity ce, MutableObjectBinding variables,
-			boolean runInitialize, ObjectValue queries) {
+	public static RenderPlan plan(BedrockDefinitions.Snapshot defs, ClientEntity ce, EntityState state, double lifeTime,
+			ObjectValue entityQueries, double lift) {
+		if (!ce.identifier().equals(state.clientEntity)) {
+			state.clientEntity = ce.identifier();
+			state.controllers.clear();
+			state.animations.clear();
+			state.lastTime = Double.NaN;
+		}
+		boolean firstFrame = Double.isNaN(state.lastTime);
+		// Clamped so a long pause (e.g. entity out of view) doesn't fast-forward a frame's worth of animation.
+		double delta = firstFrame ? 0 : Math.max(0, Math.min(0.25, lifeTime - state.lastTime));
+		state.lastTime = lifeTime;
+
+		ContextQueries queries = new ContextQueries(entityQueries);
+		queries.deltaTime = delta;
 		Scope scope = MolangProgram.newScope();
-		scope.set("variable", variables);
-		scope.set("v", variables);
+		scope.set("variable", state.variables);
+		scope.set("v", state.variables);
 		scope.set("query", queries);
 		scope.set("q", queries);
 		MutableObjectBinding temps = new MutableObjectBinding();
@@ -98,13 +158,24 @@ public final class BedrockRuntime {
 		scope.set("geometry", table(ce.geometry()));
 		scope.set("material", table(ce.materials()));
 
-		if (runInitialize) {
+		if (firstFrame) {
 			ce.initialize().forEach(script -> MolangProgram.of(script).eval(scope));
 		}
 		ce.preAnimation().forEach(script -> MolangProgram.of(script).eval(scope));
 
 		List<Layer> layers = new ArrayList<>();
 		List<BoneVisibility> boneVisibility = new ArrayList<>();
+		evaluateRenderControllers(defs, ce, scope, layers, boneVisibility);
+
+		Map<String, Pose> poses = new Animator(defs, ce, state, scope, queries, lifeTime, delta).run();
+
+		double scale = MolangProgram.of(ce.scale()).evalNumber(scope);
+		return new RenderPlan(List.copyOf(layers), List.copyOf(boneVisibility), poses, scale > 0 ? (float) scale : 1f,
+				(float) lift);
+	}
+
+	private static void evaluateRenderControllers(BedrockDefinitions.Snapshot defs, ClientEntity ce, Scope scope,
+			List<Layer> layers, List<BoneVisibility> boneVisibility) {
 		for (ControllerRef ref : ce.renderControllers()) {
 			if (ref.condition() != null && !MolangProgram.of(ref.condition()).evalBoolean(scope)) {
 				continue;
@@ -137,9 +208,228 @@ public final class BedrockRuntime {
 				}
 			}
 		}
+	}
 
-		double scale = MolangProgram.of(ce.scale()).evalNumber(scope);
-		return new RenderPlan(List.copyOf(layers), List.copyOf(boneVisibility), scale > 0 ? (float) scale : 1f);
+	/**
+	 * One frame of Bedrock animation: walks the client entity's {@code animate}
+	 * list, stepping animation controllers (state machines) and advancing each
+	 * animation it reaches, and sums their bone transforms - Bedrock layers all
+	 * active animations additively, each scaled by its blend weight.
+	 */
+	private static final class Animator {
+		private final BedrockDefinitions.Snapshot defs;
+		private final ClientEntity ce;
+		private final EntityState state;
+		private final Scope scope;
+		private final ContextQueries queries;
+		private final double lifeTime;
+		private final double delta;
+		private final Map<String, Pose> poses = new HashMap<>();
+		private final Set<String> activeAnimations = new HashSet<>();
+		private final double[] sample = new double[3];
+
+		Animator(BedrockDefinitions.Snapshot defs, ClientEntity ce, EntityState state, Scope scope, ContextQueries queries,
+				double lifeTime, double delta) {
+			this.defs = defs;
+			this.ce = ce;
+			this.state = state;
+			this.scope = scope;
+			this.queries = queries;
+			this.lifeTime = lifeTime;
+			this.delta = delta;
+		}
+
+		Map<String, Pose> run() {
+			for (ControllerRef ref : ce.animate()) {
+				double weight = ref.condition() == null ? 1 : MolangProgram.of(ref.condition()).evalNumber(scope);
+				if (weight > 0) {
+					play(ref.name(), "animate/" + ref.name(), weight);
+				}
+			}
+			// Animations that stopped playing restart from 0 next time they're reached.
+			state.animations.keySet().retainAll(activeAnimations);
+			return poses;
+		}
+
+		/** A short name from the client entity's animations table: an animation or an animation controller. */
+		private void play(String shortName, String key, double weight) {
+			String target = ce.animations().get(shortName.toLowerCase(Locale.ROOT));
+			if (target == null) {
+				return;
+			}
+			if (target.toLowerCase(Locale.ROOT).startsWith("controller.")) {
+				runController(defs.animationController(target), key, weight);
+			} else {
+				playAnimation(defs.animation(target), key, weight);
+			}
+		}
+
+		private void runController(Controller controller, String key, double weight) {
+			if (controller == null) {
+				return;
+			}
+			ControllerState cs = state.controllers.get(key);
+			if (cs == null) {
+				cs = new ControllerState(controller.initialState(), lifeTime);
+				state.controllers.put(key, cs);
+				runScripts(controller.states().get(cs.state), true);
+			}
+			State current = controller.states().get(cs.state);
+			if (current == null) {
+				return;
+			}
+
+			setStateQueries(key + "/" + cs.state + "/", lifeTime - cs.enteredAt);
+			for (Transition transition : current.transitions()) {
+				if (controller.states().containsKey(transition.target())
+						&& MolangProgram.of(transition.condition()).evalBoolean(scope)) {
+					runScripts(current, false);
+					cs.state = transition.target();
+					cs.enteredAt = lifeTime;
+					current = controller.states().get(cs.state);
+					runScripts(current, true);
+					break; // Bedrock takes at most one transition per frame.
+				}
+			}
+
+			String prefix = key + "/" + cs.state + "/";
+			setStateQueries(prefix, lifeTime - cs.enteredAt);
+			for (AnimationRef ref : current.animations()) {
+				double blend = ref.blend() == null ? 1 : MolangProgram.of(ref.blend()).evalNumber(scope);
+				if (blend > 0) {
+					play(ref.name(), prefix + ref.name(), weight * blend);
+				}
+			}
+		}
+
+		private void setStateQueries(String prefix, double stateTime) {
+			boolean any = false;
+			boolean all = true;
+			boolean none = true;
+			for (Map.Entry<String, AnimationState> entry : state.animations.entrySet()) {
+				if (entry.getKey().startsWith(prefix)) {
+					none = false;
+					any |= entry.getValue().finished;
+					all &= entry.getValue().finished;
+				}
+			}
+			queries.stateTime = stateTime;
+			queries.anyAnimationFinished = any;
+			queries.allAnimationsFinished = !none && all;
+		}
+
+		private void runScripts(State s, boolean entry) {
+			if (s != null) {
+				(entry ? s.onEntry() : s.onExit()).forEach(script -> MolangProgram.of(script).eval(scope));
+			}
+		}
+
+		private void playAnimation(Animation animation, String key, double weight) {
+			if (animation == null) {
+				return;
+			}
+			activeAnimations.add(key);
+			AnimationState as = state.animations.computeIfAbsent(key, k -> new AnimationState());
+
+			queries.animTime = as.time;
+			double time = animation.animTimeUpdate() != null
+					? MolangProgram.of(animation.animTimeUpdate()).evalNumber(scope)
+					: as.time + delta;
+
+			double length = animation.length();
+			double sampleTime = time;
+			boolean finished = false;
+			if (length > 0 && time >= length) {
+				switch (animation.loop()) {
+					case LOOP -> {
+						fireTimeline(animation, as, length);
+						as.firedUpTo = -1;
+						time %= length;
+						sampleTime = time;
+					}
+					case HOLD -> {
+						sampleTime = length;
+						finished = true;
+					}
+					case ONCE -> finished = true;
+				}
+			}
+			fireTimeline(animation, as, Math.min(time, length > 0 ? length : time));
+			as.time = time;
+			as.finished = finished;
+			if (finished && animation.loop() == BedrockAnimations.Loop.ONCE) {
+				return; // a finished one-shot no longer poses anything
+			}
+
+			if (animation.blendWeight() != null) {
+				weight *= MolangProgram.of(animation.blendWeight()).evalNumber(scope);
+			}
+			queries.animTime = sampleTime;
+			for (Map.Entry<String, BoneAnimation> bone : animation.bones().entrySet()) {
+				BoneAnimation b = bone.getValue();
+				Pose pose = poses.computeIfAbsent(bone.getKey(), k -> new Pose());
+				if (b.rotation() != null) {
+					b.rotation().sample(sampleTime, scope, sample);
+					pose.rx += sample[0] * weight;
+					pose.ry += sample[1] * weight;
+					pose.rz += sample[2] * weight;
+				}
+				if (b.position() != null) {
+					b.position().sample(sampleTime, scope, sample);
+					pose.px += sample[0] * weight;
+					pose.py += sample[1] * weight;
+					pose.pz += sample[2] * weight;
+				}
+				if (b.scale() != null) {
+					b.scale().sample(sampleTime, scope, sample);
+					pose.sx *= 1 + (sample[0] - 1) * weight;
+					pose.sy *= 1 + (sample[1] - 1) * weight;
+					pose.sz *= 1 + (sample[2] - 1) * weight;
+				}
+			}
+		}
+
+		/** Runs timeline instructions whose time was crossed since last frame. */
+		private void fireTimeline(Animation animation, AnimationState as, double upTo) {
+			if (animation.timeline().isEmpty() || upTo <= as.firedUpTo) {
+				return;
+			}
+			queries.animTime = upTo;
+			for (List<String> scripts : animation.timeline().subMap(as.firedUpTo, false, upTo, true).values()) {
+				scripts.forEach(script -> MolangProgram.of(script).eval(scope));
+			}
+			as.firedUpTo = upTo;
+		}
+	}
+
+	/**
+	 * Queries whose answer depends on where in the animation pass they're
+	 * asked - {@code q.anim_time} inside an animation, {@code q.state_time} in a
+	 * controller - layered over the entity's own queries.
+	 */
+	private static final class ContextQueries implements ObjectValue {
+		private final ObjectValue entity;
+		double animTime;
+		double deltaTime;
+		double stateTime;
+		boolean anyAnimationFinished;
+		boolean allAnimationsFinished;
+
+		ContextQueries(ObjectValue entity) {
+			this.entity = entity;
+		}
+
+		@Override
+		public ObjectProperty getProperty(String name) {
+			return switch (name.toLowerCase(Locale.ROOT)) {
+				case "anim_time" -> ObjectProperty.property(Value.of(animTime), true);
+				case "delta_time" -> ObjectProperty.property(Value.of(deltaTime), true);
+				case "state_time" -> ObjectProperty.property(Value.of(stateTime), true);
+				case "any_animation_finished" -> ObjectProperty.property(Value.of(anyAnimationFinished), true);
+				case "all_animations_finished" -> ObjectProperty.property(Value.of(allAnimationsFinished), true);
+				default -> entity.getProperty(name);
+			};
+		}
 	}
 
 	/**

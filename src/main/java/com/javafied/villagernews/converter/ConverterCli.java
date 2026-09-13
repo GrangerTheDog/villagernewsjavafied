@@ -21,7 +21,7 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 2;
+	public static final int SCHEMA_VERSION = 3;
 
 	private ConverterCli() {
 	}
@@ -55,7 +55,6 @@ public final class ConverterCli {
 		System.out.println("Behavior pack: " + (addon.behaviorPack != null ? addon.behaviorPack : "(none)"));
 
 		Map<String, String> geometryIndex = GeometryConverter.convert(addon.resourcePack, assetsDir);
-		Map<String, String> animationIndex = AnimationConverter.convert(addon.resourcePack, assetsDir);
 		int textureCount = TextureConverter.convert(addon.resourcePack, assetsDir);
 		int soundCount = SoundConverter.convert(addon.resourcePack, assetsDir);
 		int langKeyCount = LangConverter.convert(addon.resourcePack, assetsDir);
@@ -68,12 +67,11 @@ public final class ConverterCli {
 			collectSkipped(addon.behaviorPack.resolve("scripts"), addon.behaviorPack, skipped);
 		}
 
-		writeManifest(outputDir, geometryIndex, animationIndex, textureCount, soundCount, langKeyCount, skipped);
+		writeManifest(outputDir, geometryIndex, textureCount, soundCount, langKeyCount, skipped);
 		writeSkipReport(outputDir, skipped);
 		writePackMcmeta(outputDir);
 
 		System.out.println("Geometries converted: " + geometryIndex.size());
-		System.out.println("Animation files converted: " + animationIndex.values().stream().distinct().count());
 		System.out.println("Textures converted: " + textureCount);
 		System.out.println("Sounds copied: " + soundCount);
 		System.out.println("Lang keys converted: " + langKeyCount);
@@ -94,14 +92,13 @@ public final class ConverterCli {
 	}
 
 	private static void writeManifest(Path outputDir, Map<String, String> geometryIndex,
-			Map<String, String> animationIndex, int textureCount, int soundCount, int langKeyCount,
+			int textureCount, int soundCount, int langKeyCount,
 			List<String> skipped) throws IOException {
 		JsonObject manifest = new JsonObject();
 		manifest.addProperty("converterSchemaVersion", SCHEMA_VERSION);
 
 		JsonObject counts = new JsonObject();
 		counts.addProperty("geometries", geometryIndex.size());
-		counts.addProperty("animations", animationIndex.size());
 		counts.addProperty("textures", textureCount);
 		counts.addProperty("sounds", soundCount);
 		counts.addProperty("langKeys", langKeyCount);
@@ -111,10 +108,6 @@ public final class ConverterCli {
 		JsonObject geometry = new JsonObject();
 		geometryIndex.forEach(geometry::addProperty);
 		manifest.add("geometry", geometry);
-
-		JsonObject animations = new JsonObject();
-		animationIndex.forEach(animations::addProperty);
-		manifest.add("animations", animations);
 
 		ConverterUtil.writeJson(outputDir.resolve("manifest.json"), manifest);
 	}
