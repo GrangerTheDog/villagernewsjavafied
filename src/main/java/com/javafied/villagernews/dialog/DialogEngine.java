@@ -53,7 +53,13 @@ import java.util.function.BiConsumer;
 public final class DialogEngine {
 	/** Which speakers a request accepts; the script's {@code states} list. */
 	public enum State {
-		ADULT, BABY,
+		/** Grown-up ordinary villagers. */
+		ADULT,
+		/**
+		 * Baby villagers - and the Mayor, whose lines the add-on keeps in the
+		 * same "second voice" slot.
+		 */
+		BABY,
 		/** Allowed while asleep (otherwise sleepers stay quiet). */
 		SLEEPING,
 		/** Allowed right after being hurt or with a monster close by (otherwise it waits). */
@@ -61,41 +67,81 @@ public final class DialogEngine {
 	}
 
 	/**
+	 * @param kinds                which speakers may say it (see {@link Speakers})
 	 * @param interrupt            cut off whatever the speaker is saying
 	 * @param ignoreEntityCooldown ...and the speaker's own cooldowns
 	 * @param ignoreGlobalCooldown ...and the world-wide ones
 	 * @param ignoreTagCooldown    ...and the tag ones
 	 * @param facing               who the speaker turns to while talking
+	 * @param facingPos            or where it looks, if not at an entity
 	 * @param urgent               skip the "3 speakers / 10 ticks apart" pacing
+	 * @param timeout              ticks the request may wait for its turn
 	 */
-	public record Options(Set<State> states, boolean interrupt, boolean ignoreEntityCooldown, boolean ignoreGlobalCooldown,
-			boolean ignoreTagCooldown, Entity facing, boolean urgent) {
-		public static final Options DEFAULT = new Options(EnumSet.of(State.ADULT), false, false, false, false, null, false);
+	public record Options(Set<State> states, Set<Speakers.Kind> kinds, boolean interrupt, boolean ignoreEntityCooldown,
+			boolean ignoreGlobalCooldown, boolean ignoreTagCooldown, Entity facing, Vec3 facingPos, boolean urgent, int timeout) {
+		public static final Options DEFAULT = new Options(EnumSet.of(State.ADULT), Speakers.DEFAULT_KINDS, false, false, false,
+				false, null, null, false, 40);
 
 		public Options withStates(State first, State... rest) {
-			return new Options(EnumSet.of(first, rest), interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing, urgent);
+			return new Options(EnumSet.of(first, rest), kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown,
+					ignoreTagCooldown, facing, facingPos, urgent, timeout);
+		}
+
+		/** Also allowed while asleep / also allowed when in danger. */
+		public Options alsoWhen(State extra) {
+			EnumSet<State> more = EnumSet.copyOf(states);
+			more.add(extra);
+			return new Options(more, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
+					facingPos, urgent, timeout);
+		}
+
+		public Options withKinds(Speakers.Kind first, Speakers.Kind... rest) {
+			return withKinds(EnumSet.of(first, rest));
+		}
+
+		public Options withKinds(Set<Speakers.Kind> allowed) {
+			return new Options(states, Set.copyOf(allowed), interrupt, ignoreEntityCooldown, ignoreGlobalCooldown,
+					ignoreTagCooldown, facing, facingPos, urgent, timeout);
 		}
 
 		public Options facing(Entity target) {
-			return new Options(states, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, target, urgent);
+			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, target,
+					null, urgent, timeout);
+		}
+
+		public Options facing(Vec3 position) {
+			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, null,
+					position, urgent, timeout);
 		}
 
 		public Options ignoringCooldowns(boolean entity, boolean global, boolean tags) {
-			return new Options(states, interrupt, entity, global, tags, facing, urgent);
+			return new Options(states, kinds, interrupt, entity, global, tags, facing, facingPos, urgent, timeout);
 		}
 
 		public Options interrupting() {
-			return new Options(states, true, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing, urgent);
+			return new Options(states, kinds, true, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
+					facingPos, urgent, timeout);
+		}
+
+		/** The script's "all four flags": ignore every cooldown and cut off whatever is being said. */
+		public Options forced() {
+			return ignoringCooldowns(true, true, true).interrupting();
 		}
 
 		public Options asUrgent() {
-			return new Options(states, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing, true);
+			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
+					facingPos, true, timeout);
+		}
+
+		public Options waitingAtMost(int ticks) {
+			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
+					facingPos, urgent, ticks);
 		}
 	}
 
 	/** A line being spoken; the speaker counts as busy until {@link #releaseTick}. */
 	public record Speech(LivingEntity speaker, Dialog dialog, int line, long endTick, long releaseTick, Entity facing,
-			Vec3 frozenAt) {
+			Vec3 facingPos, Vec3 frozenAt) {
 		public boolean talking(long now) {
 			return now < endTick;
 		}
@@ -119,7 +165,6 @@ public final class DialogEngine {
 	private static final int MAX_SPEAKERS = 3;
 	private static final int START_GAP_TICKS = 10;
 	private static final int QUEUE_INTERVAL = 3;
-	private static final int REQUEST_TIMEOUT = 40;
 	/** After its line ends, a speaker stays busy this long (the script clears subtitles then). */
 	private static final int LINGER_TICKS = 10;
 	private static final int HURT_SILENCE_TICKS = 40;
@@ -142,6 +187,8 @@ public final class DialogEngine {
 	private final Map<Entity, Speech> speeches = new HashMap<>();
 	private final Map<String, Integer> lastLine = new HashMap<>();
 	private final Map<Entity, Refusal> lastRefusal = new WeakHashMap<>();
+	/** When each speaker last said each dialog; "the nearest villager reacts" prefers who said it longest ago. */
+	private final Map<Entity, Map<String, Long>> lastSaid = new WeakHashMap<>();
 	private final List<Request> queue = new ArrayList<>();
 	private long lastStart = -START_GAP_TICKS;
 
@@ -201,7 +248,7 @@ public final class DialogEngine {
 		if (refusal != null) {
 			return refuse(speaker, dialogId, refusal);
 		}
-		queue.add(new Request(speaker, dialog, options, now() + REQUEST_TIMEOUT));
+		queue.add(new Request(speaker, dialog, options, now() + options.timeout()));
 		return true;
 	}
 
@@ -290,6 +337,23 @@ public final class DialogEngine {
 		return String.format(java.util.Locale.ROOT, "%.1fs", ticks / 20.0);
 	}
 
+	/** When this speaker last said this dialog (0 if never). */
+	public long lastSaid(Entity speaker, String dialogId) {
+		Map<String, Long> said = lastSaid.get(speaker);
+		return said == null ? 0 : said.getOrDefault(dialogId, 0L);
+	}
+
+	/**
+	 * The script's {@code westjl}: could this speaker take this dialog now?
+	 * Used to pick among nearby candidates before queueing.
+	 */
+	public boolean available(LivingEntity speaker, String dialogId, Options options) {
+		Dialog dialog = library.get(dialogId);
+		return dialog != null && speaker.isAlive() && !isTalking(speaker)
+				&& ((ServerLevel) speaker.level()).getNearestPlayer(speaker, RANGE) != null
+				&& cooldownBlocking(speaker, dialog, options) == null;
+	}
+
 	/** Villagers keep quiet for 2 seconds after being hurt. */
 	public void markHurt(Entity speaker) {
 		lastHurt.put(speaker, now());
@@ -300,8 +364,15 @@ public final class DialogEngine {
 		if (!speaker.isAlive()) {
 			return "dead";
 		}
-		if (!options.states().contains(speaker.isBaby() ? State.BABY : State.ADULT)) {
-			return speaker.isBaby() ? "a line for adults" : "a line for babies";
+		Speakers.Kind kind = Speakers.kindOf(speaker);
+		if (kind == null || !options.kinds().contains(kind)) {
+			return "not a line for " + (kind == null ? "this mob" : kind.name().toLowerCase(java.util.Locale.ROOT));
+		}
+		// The script's age check applies to ordinary villagers; the Mayor always counts as the "second voice".
+		State age = kind == Speakers.Kind.MAYOR || kind == Speakers.Kind.VILLAGER && speaker.isBaby() ? State.BABY
+				: kind == Speakers.Kind.VILLAGER ? State.ADULT : null;
+		if (age != null && !options.states().contains(age)) {
+			return age == State.BABY ? "a line for grown-ups" : "a line for babies";
 		}
 		if (speaker.isSleeping() && !options.states().contains(State.SLEEPING)) {
 			return "asleep";
@@ -378,6 +449,11 @@ public final class DialogEngine {
 			if (speaker instanceof Mob mob) {
 				mob.getLookControl().setLookAt(facing, 30, 30);
 			}
+		} else if (speech.facingPos() != null) {
+			speaker.lookAt(EntityAnchorArgument.Anchor.EYES, speech.facingPos());
+			if (speaker instanceof Mob mob) {
+				mob.getLookControl().setLookAt(speech.facingPos());
+			}
 		}
 		if (speech.frozenAt() != null) {
 			if (speaker instanceof Mob mob) {
@@ -453,7 +529,9 @@ public final class DialogEngine {
 		lastLine.put(dialog.id(), index);
 		lastStart = now;
 		speeches.put(speaker, new Speech(speaker, dialog, index, now + line.durationTicks(),
-				now + line.durationTicks() + LINGER_TICKS, options.facing(), speaker.onGround() ? speaker.position() : null));
+				now + line.durationTicks() + LINGER_TICKS, options.facing(), options.facingPos(),
+				speaker.onGround() ? speaker.position() : null));
+		lastSaid.computeIfAbsent(speaker, e -> new HashMap<>()).put(dialog.id(), now);
 		startCooldowns(speaker, dialog, line);
 
 		DialogPayloads.Line payload = new DialogPayloads.Line(speaker.getId(), line.sound(), line.animation(),

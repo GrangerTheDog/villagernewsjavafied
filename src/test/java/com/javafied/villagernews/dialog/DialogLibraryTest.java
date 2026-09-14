@@ -53,9 +53,10 @@ class DialogLibraryTest {
 
 	/** Every dialog id the hand-ported triggers use must exist in the add-on. */
 	@Test
-	void portedTriggersReferenceRealDialogs() throws IllegalAccessException {
+	void portedTriggersReferenceRealDialogs() throws ReflectiveOperationException {
 		List<String> ids = new ArrayList<>();
-		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class)) {
+		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class,
+				PlayerActionReactions.class, VillagerLifeReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
 				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
 						|| field.getName().equals("NOSED_CONVERSATIONS") || field.getName().equals("TRADE_DIALOGS")) {
@@ -67,6 +68,17 @@ class DialogLibraryTest {
 					ids.add(id);
 				} else if (value instanceof java.util.Map<?, ?> map) {
 					map.values().stream().filter(String.class::isInstance).map(String.class::cast).forEach(ids::add);
+				} else if (value instanceof List<?> list) {
+					for (Object element : list) {
+						if (element instanceof Record record) {
+							for (var component : record.getClass().getRecordComponents()) {
+								if (component.getName().equals("dialog")) {
+									component.getAccessor().setAccessible(true);
+									ids.add((String) component.getAccessor().invoke(record));
+								}
+							}
+						}
+					}
 				}
 			}
 		}

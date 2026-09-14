@@ -124,6 +124,10 @@ public final class VillagerReactions {
 
 	/** The script's idle trigger ({@code vszwnq}): the odd calendar remark, else a chat with a neighbour or a comment. */
 	private static void chatter(DialogEngine engine, Villager villager) {
+		if (villager.isBaby()) {
+			VillagerLifeReactions.babyAtPlay(villager);
+			return;
+		}
 		if (villager.getVehicle() instanceof AbstractBoat) {
 			return;
 		}
