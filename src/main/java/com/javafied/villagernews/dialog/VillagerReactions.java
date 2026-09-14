@@ -43,6 +43,7 @@ public final class VillagerReactions {
 	private static final String NITWIT = "uookqp";
 	private static final String UNEMPLOYED = "gbxzxv";
 	private static final String EMPLOYED = "lvigit";
+	private static final String SEES_EXPERIENCE_ORBS = "cvltyw";
 	// Real-world calendar chatter (the script's siigqd).
 	private static final Map<DayOfWeek, String> WEEKDAY = Map.of(DayOfWeek.SUNDAY, "uzvatl", DayOfWeek.MONDAY, "gkvlqc",
 			DayOfWeek.TUESDAY, "dkpihl", DayOfWeek.WEDNESDAY, "gwakiz", DayOfWeek.THURSDAY, "zglkgp",
@@ -131,7 +132,7 @@ public final class VillagerReactions {
 			VillagerLifeReactions.babyAtPlay(villager);
 			return;
 		}
-		if (WorldReactions.headingHome(villager)) {
+		if (WorldReactions.headingHome(villager) || seesExperienceOrbs(villager)) {
 			return;
 		}
 		if (villager.getVehicle() instanceof AbstractBoat || VillagerRoutineReactions.eveningGathering(engine, villager)) {
@@ -154,6 +155,13 @@ public final class VillagerReactions {
 			return;
 		}
 		engine.request(villager, contextDialog(villager), Options.DEFAULT.ignoringCooldowns(false, true, false));
+	}
+
+	/** The script's idle check for experience orbs: four or more within 12 blocks. */
+	private static boolean seesExperienceOrbs(Villager villager) {
+		List<net.minecraft.world.entity.ExperienceOrb> orbs = villager.level().getEntitiesOfClass(net.minecraft.world.entity.ExperienceOrb.class,
+				villager.getBoundingBox().inflate(12), orb -> orb.distanceTo(villager) <= 12);
+		return orbs.size() >= 4 && Reactions.say(villager, SEES_EXPERIENCE_ORBS, Options.DEFAULT.facing(villager.position()));
 	}
 
 	/** Weekday remarks, weekend, October, December, and a couple of special dates. The add-on meant to; see below. */
