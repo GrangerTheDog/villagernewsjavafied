@@ -5,6 +5,8 @@ import com.javafied.villagernews.dialog.BedrockSoundIds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.EntityBoundSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 
 /** Client-side playback of the add-on's sounds, following the entity that makes them. */
@@ -12,11 +14,18 @@ public final class BedrockSounds {
 	private BedrockSounds() {
 	}
 
-	/** @return the playing instance, so a line cut short can be stopped */
+	/**
+	 * @return the playing instance, so a line cut short can be stopped. A
+	 *         sound the add-on names but doesn't have (its villagers' footstep,
+	 *         {@code qbscfl}) plays nothing, as in Bedrock, without a warning.
+	 */
 	public static SoundInstance playFrom(Entity entity, String bedrockEvent) {
-		SoundInstance sound = new EntityBoundSoundInstance(BedrockSoundIds.event(bedrockEvent), entity.getSoundSource(),
-				1f, 1f, entity, entity.getRandom().nextLong());
-		Minecraft.getInstance().getSoundManager().play(sound);
+		SoundEvent event = BedrockSoundIds.event(bedrockEvent);
+		SoundInstance sound = new EntityBoundSoundInstance(event, entity.getSoundSource(), 1f, 1f, entity, entity.getRandom().nextLong());
+		SoundManager sounds = Minecraft.getInstance().getSoundManager();
+		if (sounds.getSoundEvent(event.location()) != null) {
+			sounds.play(sound);
+		}
 		return sound;
 	}
 }
