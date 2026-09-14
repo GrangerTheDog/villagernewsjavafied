@@ -169,6 +169,53 @@ class BedrockRuntimeTest {
 				"offset animation and puppet lift should cancel out");
 	}
 
+	/** The add-on's nose physics: walking sideways, then stopping, swings the nose (bone fgk6) on its spring. */
+	@Test
+	void noseSwingsWhenAVillagerStops() {
+		assertTrue(swing(defs.clientEntity("villager"), null) > 4, "the villager's nose didn't swing");
+	}
+
+	/** ...and the villager nose a player wears does the same. */
+	@Test
+	void wornNoseSwingsToo() {
+		MutableObjectBinding context = new MutableObjectBinding();
+		context.set("is_first_person", Value.of(false));
+		context.set("item_slot", StringValue.of("head"));
+		assertTrue(swing(defs.attachable(AddonNames.item("villager_nose")), context) > 4, "the worn nose didn't swing");
+	}
+
+	/** How far the nose rolls (degrees, peak to peak) after a second's walk to the side and a stop. */
+	private static double swing(BedrockDefinitions.ClientEntity ce, MutableObjectBinding context) {
+		MutableObjectBinding q = queries(ce.identifier(), 1);
+		q.set("is_on_ground", Value.of(1));
+		double[] x = {0};
+		q.set("position", (Function<Object>) (ctx, args) -> {
+			int axis = (int) args.next().eval().getAsNumber();
+			return Value.of(axis == 0 ? x[0] : axis == 1 ? 64 : 0);
+		});
+		BedrockRuntime.EntityState state = new BedrockRuntime.EntityState();
+		double min = 0;
+		double max = 0;
+		for (int frame = 0; frame <= 60; frame++) {
+			double time = frame * 0.05;
+			boolean walking = frame < 20;
+			if (walking) {
+				x[0] += 0.1;
+			}
+			q.set("modified_move_speed", Value.of(walking ? 0.8 : 0));
+			q.set("life_time", Value.of(time));
+			RenderPlan plan = context == null ? BedrockRuntime.plan(defs, ce, state, time, q, 0)
+					: BedrockRuntime.plan(defs, ce, state, time, q, 0, context);
+			BedrockRuntime.Pose nose = plan.poses().get("fgk6");
+			if (nose != null) {
+				min = Math.min(min, nose.rz);
+				max = Math.max(max, nose.rz);
+			}
+		}
+		System.out.println(ce.identifier() + ": nose roll " + min + " .. " + max);
+		return max - min;
+	}
+
 	@Test
 	void dyingVillagerCriesOut() {
 		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");

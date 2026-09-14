@@ -156,16 +156,28 @@ public final class BedrockRuntime {
 	 * attachable (or isn't converted).
 	 */
 	public static RenderPlan evaluateAttachable(Entity holder, String attachable, boolean firstPerson, boolean mainHand, float partialTick) {
+		return evaluateAttachable(holder, attachable, firstPerson, mainHand ? "main_hand" : "off_hand", partialTick);
+	}
+
+	/**
+	 * A worn item's attachable as its wearer has it on ({@code c.item_slot}
+	 * "head"): the villager nose swings on its spring like a villager's own.
+	 */
+	public static RenderPlan evaluateWorn(Entity wearer, String attachable, float partialTick) {
+		return evaluateAttachable(wearer, attachable, false, "head", partialTick);
+	}
+
+	private static RenderPlan evaluateAttachable(Entity holder, String attachable, boolean firstPerson, String slot, float partialTick) {
 		BedrockDefinitions.Snapshot defs = BedrockDefinitions.get();
 		ClientEntity ce = defs.attachable(attachable);
 		if (ce == null) {
 			return null;
 		}
-		String key = attachable + (firstPerson ? "/first_person" : "/third_person") + (mainHand ? "/main_hand" : "/off_hand");
+		String key = attachable + (firstPerson ? "/first_person" : "/third_person") + "/" + slot;
 		EntityState state = ATTACHABLE_STATES.computeIfAbsent(holder, e -> new HashMap<>()).computeIfAbsent(key, k -> new EntityState());
 		MutableObjectBinding context = new MutableObjectBinding();
 		context.set("is_first_person", Value.of(firstPerson));
-		context.set("item_slot", StringValue.of(mainHand ? "main_hand" : "off_hand"));
+		context.set("item_slot", StringValue.of(slot));
 		EntityQueries queries = new EntityQueries(holder, partialTick, Map.of(), Map.of(), false);
 		RenderPlan plan = plan(defs, ce, state, (holder.tickCount + partialTick) / 20.0, queries, 0, context);
 		state.pendingSounds.clear();
