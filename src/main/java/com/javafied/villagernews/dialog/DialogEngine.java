@@ -23,6 +23,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -179,6 +181,8 @@ public final class DialogEngine {
 	/** After its line ends, a speaker stays busy this long (the script clears subtitles then). */
 	private static final int LINGER_TICKS = 10;
 	private static final int HURT_SILENCE_TICKS = 40;
+	/** How long after being hit a speaker counts as fleeing (panic starts on its brain's next tick). */
+	private static final int RECENTLY_HURT_TICKS = 60;
 	private static final double MONSTER_RADIUS = 8;
 	/** A player this close to someone already talking won't hear a second villager start. */
 	private static final double LISTENER_RADIUS = 10;
@@ -496,9 +500,16 @@ public final class DialogEngine {
 		}
 	}
 
-	/** While talking: face the listener, and don't wander off mid-sentence. */
+	/**
+	 * While talking: face the listener, and don't wander off mid-sentence -
+	 * unless running from something (a villager you hit says "ouch" as it
+	 * flees, it doesn't stop to face you).
+	 */
 	private static void holdStill(Speech speech) {
 		LivingEntity speaker = speech.speaker();
+		if (fleeing(speaker)) {
+			return;
+		}
 		Entity facing = speech.facing();
 		if (facing != null && facing.isAlive() && facing.level() == speaker.level()) {
 			speaker.lookAt(EntityAnchorArgument.Anchor.EYES, facing.getEyePosition());
@@ -538,6 +549,13 @@ public final class DialogEngine {
 				queue.remove(request);
 			}
 		}
+	}
+
+	/** Panicking, keeping away from something, or hit a moment ago (it's about to panic). */
+	private static boolean fleeing(LivingEntity speaker) {
+		return Boolean.TRUE.equals(speaker.getAttached(ModAttachments.AVOIDING))
+				|| speaker instanceof Villager villager && villager.getBrain().isActive(Activity.PANIC)
+				|| speaker.getLastHurtByMob() != null && speaker.tickCount - speaker.getLastHurtByMobTimestamp() < RECENTLY_HURT_TICKS;
 	}
 
 	/** On the ground (or riding), head above water. */
@@ -588,7 +606,7 @@ public final class DialogEngine {
 		lastStart = now;
 		speeches.put(speaker, new Speech(speaker, dialog, index, now + line.durationTicks(),
 				now + line.durationTicks() + LINGER_TICKS, options.facing(), options.facingPos(),
-				speaker.onGround() && !Boolean.TRUE.equals(speaker.getAttached(ModAttachments.AVOIDING)) ? speaker.position() : null));
+				speaker.onGround() && !fleeing(speaker) ? speaker.position() : null));
 		lastSaid.computeIfAbsent(speaker, e -> new HashMap<>()).put(dialog.id(), now);
 		startCooldowns(speaker, dialog, line);
 		broadcast(speaker, line);
