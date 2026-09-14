@@ -7,6 +7,10 @@
 	"authors": [
 		"zuidweg50"
 	],
+	"contact": {
+		"sources": "https://github.com/GrangerTheDog/villagernewsjavafied"
+	},
+	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
