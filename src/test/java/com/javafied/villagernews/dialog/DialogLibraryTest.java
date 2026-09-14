@@ -55,14 +55,22 @@ class DialogLibraryTest {
 	@Test
 	void portedTriggersReferenceRealDialogs() throws IllegalAccessException {
 		List<String> ids = new ArrayList<>();
-		for (Field field : VillagerReactions.class.getDeclaredFields()) {
-			if (Modifier.isStatic(field.getModifiers()) && field.getType() == String.class
-					&& !field.getName().startsWith("TAG_") && !field.getName().equals("NOSED_CONVERSATIONS")) {
+		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class)) {
+			for (Field field : reactions.getDeclaredFields()) {
+				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
+						|| field.getName().equals("NOSED_CONVERSATIONS") || field.getName().equals("TRADE_DIALOGS")) {
+					continue;
+				}
 				field.setAccessible(true);
-				ids.add((String) field.get(null));
+				Object value = field.get(null);
+				if (value instanceof String id && !id.contains(":") && !id.equals("none")) {
+					ids.add(id);
+				} else if (value instanceof java.util.Map<?, ?> map) {
+					map.values().stream().filter(String.class::isInstance).map(String.class::cast).forEach(ids::add);
+				}
 			}
 		}
-		assertTrue(ids.size() >= 10);
+		assertTrue(ids.size() >= 30, "found " + ids.size());
 		for (LocalDate date = LocalDate.of(2026, 1, 1); date.getYear() == 2026; date = date.plusDays(1)) {
 			ids.addAll(VillagerReactions.calendarDialogs(date));
 		}
@@ -71,5 +79,14 @@ class DialogLibraryTest {
 		}
 		assertTrue(VillagerReactions.calendarDialogs(LocalDate.of(2026, 12, 31)).containsAll(List.of("xljknt", "tkkegl")));
 		assertTrue(library.conversations().stream().anyMatch(c -> c.getFirst().startsWith("gmrypk")));
+	}
+
+	@Test
+	void greetsByTheNearestReputationBand() {
+		assertEquals("clbjww", TradeReactions.greeting(0));
+		assertEquals("clbjww", TradeReactions.greeting(20));
+		assertEquals("kuhvdv", TradeReactions.greeting(60));
+		assertEquals("vlrsrn", TradeReactions.greeting(400));
+		assertEquals("xduuwm", TradeReactions.greeting(-500));
 	}
 }

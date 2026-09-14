@@ -1,5 +1,6 @@
 package com.javafied.villagernews.dialog;
 
+import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.behavior.BehaviorDefinitions;
 import com.javafied.villagernews.behavior.BehaviorProperties;
 import com.javafied.villagernews.behavior.BehaviorSensors;
@@ -15,6 +16,7 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,12 +28,12 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -54,13 +56,13 @@ public final class VillagerItemReactions {
 	private static final String ALREADY_HAS_NOSE = "akfekx";
 	private static final String DRESSES_THEMSELVES = "orogba";
 	private static final String SAW_MY_NOSE = "kejscw";
-	/** Reaction to being given each accessory, for adults (said twice as often as {@link #DRESSES_THEMSELVES}) and babies. */
-	private static final Map<Item, String> ADULT_GIFT = Map.of(ModItems.TESTIFICATE_MAN_HELMET, "wurmgu",
-			ModItems.MICROPHONE, "inirxg", ModItems.MOUSTACHE, "ozxzla");
-	private static final Map<Item, String> BABY_GIFT = Map.of(ModItems.MAYOR_HAT, "svdjdk",
-			ModItems.TESTIFICATE_MAN_HELMET, "cxeziv", ModItems.MICROPHONE, "riezum", ModItems.MOUSTACHE, "rlkdqd");
-	private static final List<Item> ACCESSORIES = List.of(ModItems.MAYOR_HAT, ModItems.TESTIFICATE_MAN_HELMET,
-			ModItems.MICROPHONE, ModItems.MOUSTACHE);
+	private static final String ITEM_MICROPHONE = "dsojot";
+	/** Reaction to being given each accessory (by item id), for adults (said twice as often as {@link #DRESSES_THEMSELVES}) and babies. */
+	private static final Map<String, String> ADULT_GIFT = Map.of("ufernq", "wurmgu", ITEM_MICROPHONE, "inirxg", "odplew", "ozxzla");
+	private static final Map<String, String> BABY_GIFT = Map.of("cryhjc", "svdjdk", "ufernq", "cxeziv", ITEM_MICROPHONE, "riezum",
+			"odplew", "rlkdqd");
+	/** What villagers can be given to wear: Mayor Hat, Testificate Man Helmet, Microphone, Moustache. */
+	private static final Set<String> ACCESSORIES = Set.of("cryhjc", "ufernq", ITEM_MICROPHONE, "odplew");
 
 	private static final Map<Player, Boolean> wearingNose = new WeakHashMap<>();
 
@@ -73,7 +75,7 @@ public final class VillagerItemReactions {
 				return InteractionResult.PASS;
 			}
 			ItemStack stack = player.getItemInHand(hand);
-			if (!stack.is(Items.SHEARS) && !stack.is(ModItems.VILLAGER_NOSE) && !ACCESSORIES.contains(stack.getItem())) {
+			if (!stack.is(Items.SHEARS) && !stack.is(ModItems.VILLAGER_NOSE) && !ACCESSORIES.contains(itemPath(stack))) {
 				return InteractionResult.PASS;
 			}
 			if (level instanceof ServerLevel server) {
@@ -94,8 +96,7 @@ public final class VillagerItemReactions {
 		boolean hasNose = !Boolean.FALSE.equals(properties.get(NOSE));
 		if (stack.is(Items.SHEARS)) {
 			if (!NONE.equals(accessory)) {
-				Item worn = BuiltInRegistries.ITEM.getValue(com.javafied.villagernews.VillagerNewsJavafied.id(accessory));
-				dropFromHead(level, villager, new ItemStack(worn));
+				dropFromHead(level, villager, new ItemStack(BuiltInRegistries.ITEM.getValue(VillagerNewsJavafied.id(accessory))));
 				properties.set(ACCESSORY, new JsonPrimitive(NONE));
 				react(villager, player, TAKEN_ACCESSORY, State.ADULT);
 			} else if (hasNose && !villager.isBaby()) {
@@ -125,17 +126,22 @@ public final class VillagerItemReactions {
 		if (!NONE.equals(accessory)) {
 			return;
 		}
-		Item item = stack.getItem();
+		String item = itemPath(stack);
 		stack.consume(1, player);
-		properties.set(ACCESSORY, new JsonPrimitive(BuiltInRegistries.ITEM.getKey(item).getPath()));
+		properties.set(ACCESSORY, new JsonPrimitive(item));
 		if (villager.isBaby()) {
 			react(villager, player, BABY_GIFT.get(item), State.BABY);
 		} else {
 			String special = ADULT_GIFT.get(item);
-			List<String> options = item == ModItems.MICROPHONE ? List.of(special)
+			List<String> options = item.equals(ITEM_MICROPHONE) ? List.of(special)
 					: special == null ? List.of(DRESSES_THEMSELVES) : List.of(DRESSES_THEMSELVES, special, special);
 			react(villager, player, options.get(ThreadLocalRandom.current().nextInt(options.size())), State.ADULT);
 		}
+	}
+
+	private static String itemPath(ItemStack stack) {
+		Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+		return id.getNamespace().equals(VillagerNewsJavafied.MOD_ID) ? id.getPath() : "";
 	}
 
 	/** The script's {@code yyofim}: said to the player, cutting off anything else, right away. */
