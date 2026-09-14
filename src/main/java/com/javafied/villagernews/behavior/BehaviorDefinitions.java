@@ -34,8 +34,9 @@ public final class BehaviorDefinitions {
 	public record Trigger(JsonElement filters, String event) {
 	}
 
+	/** @param components the entity's base components, as-is, for the few read directly (e.g. its trade table) */
 	public record Definition(String identifier, Map<String, Property> properties, List<Subsensor> subsensors,
-			List<Trigger> environmentTriggers, JsonObject events) {
+			List<Trigger> environmentTriggers, JsonObject events, JsonObject components) {
 	}
 
 	private final Map<String, Definition> byIdentifier;
@@ -121,7 +122,7 @@ public final class BehaviorDefinitions {
 		}
 		JsonObject events = entity.has("events") ? entity.getAsJsonObject("events") : new JsonObject();
 		return new Definition(description.get("identifier").getAsString(), Map.copyOf(properties), List.copyOf(subsensors),
-				List.copyOf(triggers), events);
+				List.copyOf(triggers), events, components);
 	}
 
 	private static Subsensor subsensor(JsonObject s) {

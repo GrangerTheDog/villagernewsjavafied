@@ -3,7 +3,8 @@
 	"package": "com.javafied.villagernews.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"AbstractVillagerMixin"
+		"AbstractVillagerMixin",
+		"VillagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

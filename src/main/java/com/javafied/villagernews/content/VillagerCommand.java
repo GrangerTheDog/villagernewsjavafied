@@ -52,6 +52,9 @@ public final class VillagerCommand {
 		Vec3 pos = source.getPosition();
 		villager.setPos(pos.x, pos.y, pos.z);
 		villager.setAttached(ModAttachments.VILLAGER_VARIANT, variant);
+		if (SpecialTrades.hasOwnTrades(variant)) {
+			SpecialTrades.makeTrader(source.getLevel(), villager);
+		}
 		source.getLevel().addFreshEntity(villager);
 
 		source.sendSuccess(() -> Component.literal("Summoned villager variant '" + variant + "'"), true);

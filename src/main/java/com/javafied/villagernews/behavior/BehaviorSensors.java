@@ -63,6 +63,10 @@ public final class BehaviorSensors {
 		ServerTickEvents.END_SERVER_TICK.register(BehaviorSensors::tick);
 	}
 
+	public static BehaviorDefinitions definitions() {
+		return definitions;
+	}
+
 	/** The behavior definition a Java villager stands in for, by its add-on variant. */
 	public static Definition definitionOf(Villager villager) {
 		return definitions.get(villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, "villager"));

@@ -8,6 +8,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.gameevent.GameEvent;
@@ -38,6 +39,9 @@ public class VariantSpawnEggItem extends Item {
 		Mob mob = type.spawn(level, spawned -> {
 			spawned.setAttached(ModAttachments.VILLAGER_VARIANT, variant);
 			spawned.setCustomName(Component.translatable("entity.villagernewsjavafied." + variant));
+			if (spawned instanceof Villager villager && SpecialTrades.hasOwnTrades(variant)) {
+				SpecialTrades.makeTrader(level, villager);
+			}
 		}, pos, EntitySpawnReason.SPAWN_ITEM_USE, true, face == Direction.UP);
 		if (mob != null) {
 			context.getItemInHand().consume(1, context.getPlayer());

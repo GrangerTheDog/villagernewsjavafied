@@ -34,7 +34,10 @@ public final class BedrockDataConverter {
 			writePropertyDefaults(behaviorPack.resolve("entities"), outDir.resolve("properties.json"));
 			count++;
 			// Behavior definitions (sensors, events, properties) for the server-side interpreter.
-			count += copyDir(behaviorPack.resolve("entities"), outputAssetsDir.getParent().getParent().resolve("server").resolve("entities"), ".json");
+			Path server = outputAssetsDir.getParent().getParent().resolve("server");
+			count += copyDir(behaviorPack.resolve("entities"), server.resolve("entities"), ".json");
+			// Trade tables, referenced by path from the entities' economy_trade_table component.
+			count += copyDir(behaviorPack.resolve("trading"), server.resolve("trading"), ".json");
 		}
 		return count;
 	}
