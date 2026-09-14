@@ -20,6 +20,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -154,6 +155,9 @@ public final class BedrockFilters {
 					stack -> itemId(stack).equals(qualified(value.getAsString()))), operator, true);
 			case "has_equipment_tag" -> compare(living != null && anyEquipment(living, domain,
 					stack -> hasTag(stack, value.getAsString())), operator, true);
+			// A merchant with something left to sell (the wandering trader notices when it's sold out).
+			case "has_trade_supply" -> compare(subject instanceof AbstractVillager merchant
+					&& merchant.getOffers().stream().anyMatch(offer -> !offer.isOutOfStock()), operator, value);
 			default -> {
 				if (WARNED.add(test)) {
 					VillagerNewsJavafied.LOGGER.debug("Bedrock filter test '{}' isn't ported; treating it as false", test);

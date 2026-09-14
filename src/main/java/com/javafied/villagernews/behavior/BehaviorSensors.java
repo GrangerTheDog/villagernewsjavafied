@@ -22,7 +22,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,7 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Runs the sensors of the add-on's behavior-pack entities on the Java
- * villagers that stand in for them: {@code entity_sensor} subsensors (players
+ * villagers and wandering traders that stand in for them: {@code entity_sensor} subsensors (players
  * in range matching filters, e.g. wearing iron armour or holding an emerald)
  * and {@code environment_sensor} triggers, firing the entity's events - which
  * set properties and, through a {@code /scriptevent} naming a dialog by its
@@ -45,6 +47,7 @@ public final class BehaviorSensors {
 	private static final String DIALOG_EVENT = "dialog";
 	private static final String BABY_DIALOG_EVENT = "baby_dialog";
 	private static final int MAX_EVENT_DEPTH = 8;
+	private static final String TRADER = "wandering_trader";
 
 	private static BehaviorDefinitions definitions = BehaviorDefinitions.EMPTY;
 	/** Per villager, per subsensor: the tick it may sense again. */
@@ -71,9 +74,10 @@ public final class BehaviorSensors {
 		return definitions;
 	}
 
-	/** The behavior definition a Java villager stands in for, by its character. */
-	public static Definition definitionOf(Villager villager) {
-		return definitionOfCharacter(villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT));
+	/** The behavior definition a Java villager (by its character) or wandering trader stands in for. */
+	public static Definition definitionOf(AbstractVillager villager) {
+		return definitionOfCharacter(villager instanceof WanderingTrader ? TRADER
+				: villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT));
 	}
 
 	/**
@@ -106,11 +110,11 @@ public final class BehaviorSensors {
 			if (level.players().isEmpty()) {
 				continue;
 			}
-			Set<Villager> villagers = new HashSet<>();
+			Set<AbstractVillager> villagers = new HashSet<>();
 			for (ServerPlayer player : level.players()) {
-				villagers.addAll(level.getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(DialogEngine.RANGE)));
+				villagers.addAll(level.getEntitiesOfClass(AbstractVillager.class, player.getBoundingBox().inflate(DialogEngine.RANGE)));
 			}
-			for (Villager villager : villagers) {
+			for (AbstractVillager villager : villagers) {
 				Definition definition = definitionOf(villager);
 				if (definition != null && villager.isAlive()) {
 					sense(level, villager, definition, now);
@@ -119,7 +123,7 @@ public final class BehaviorSensors {
 		}
 	}
 
-	private static void sense(ServerLevel level, Villager villager, Definition definition, long now) {
+	private static void sense(ServerLevel level, AbstractVillager villager, Definition definition, long now) {
 		BehaviorProperties properties = new BehaviorProperties(villager, definition);
 		BedrockFilters.Context self = new BedrockFilters.Context(villager, null, properties);
 		for (Trigger trigger : definition.environmentTriggers()) {
@@ -154,7 +158,7 @@ public final class BehaviorSensors {
 		}
 	}
 
-	private static void fire(Villager villager, Definition definition, BehaviorProperties properties, String event, int depth) {
+	private static void fire(AbstractVillager villager, Definition definition, BehaviorProperties properties, String event, int depth) {
 		JsonElement body = definition.events().get(event);
 		if (body != null && depth < MAX_EVENT_DEPTH) {
 			run(villager, definition, properties, body, depth);
@@ -162,7 +166,7 @@ public final class BehaviorSensors {
 	}
 
 	/** An event body: filters, sequence, randomize, set_property, queue_command, trigger. Component groups are ignored. */
-	private static void run(Villager villager, Definition definition, BehaviorProperties properties, JsonElement body, int depth) {
+	private static void run(AbstractVillager villager, Definition definition, BehaviorProperties properties, JsonElement body, int depth) {
 		if (!body.isJsonObject()) {
 			return;
 		}
@@ -212,7 +216,7 @@ public final class BehaviorSensors {
 	}
 
 	/** Only the dialog requests are meaningful here; the script handles them as {@code scriptevent}s. */
-	private static void command(Villager villager, String command) {
+	private static void command(AbstractVillager villager, String command) {
 		String[] words = command.strip().replaceFirst("^/", "").split("\\s+");
 		DialogEngine engine = DialogEngine.get();
 		String event = words.length >= 3 && words[0].equals("scriptevent")
