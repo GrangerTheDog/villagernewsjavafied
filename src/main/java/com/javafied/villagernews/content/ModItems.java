@@ -5,6 +5,7 @@ import com.javafied.villagernews.VillagerNewsJavafied;
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -17,6 +18,10 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.EquipmentAsset;
+import net.minecraft.world.item.equipment.EquipmentAssets;
+import net.minecraft.world.item.component.UseEffects;
+import net.minecraft.world.item.equipment.Equippable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +35,16 @@ import java.util.function.Function;
  */
 public final class ModItems {
 	private static final List<Item> TAB_CONTENTS = new ArrayList<>();
+	private static final ResourceKey<EquipmentAsset> WORN = ResourceKey.create(EquipmentAssets.ROOT_ID, VillagerNewsJavafied.id("worn"));
 
 	/** Villager News Handbook: the add-on's guide, read from the player's converted add-on. */
 	public static final Item HANDBOOK = register("handbook", p -> AttachableItem.create(p, true), new Item.Properties().stacksTo(1));
 	public static final Item MAYOR_HAT = wearable("mayor_hat");
 	public static final Item TESTIFICATE_MAN_HELMET = wearable("testificate_man_helmet");
 	public static final Item MOUSTACHE = wearable("moustache");
-	public static final Item MICROPHONE = register("microphone", p -> AttachableItem.create(p, false), new Item.Properties().stacksTo(1));
+	/** Held up to speak into while used: at full speed, as in the add-on. */
+	public static final Item MICROPHONE = register("microphone", p -> AttachableItem.create(p, false), new Item.Properties().stacksTo(1)
+			.component(DataComponents.USE_EFFECTS, new UseEffects(true, true, 1)));
 	public static final Item VILLAGER_NOSE = wearable("villager_nose");
 
 	public static final Item MAYOR_SPAWN_EGG = spawnEgg("mayor", EntityTypes.VILLAGER);
@@ -61,8 +69,14 @@ public final class ModItems {
 	public static void init() {
 	}
 
+	/**
+	 * Worn on the head. The equipment asset is only a marker: vanilla hands a
+	 * head item with one to the armor layer (where GeckoLib draws the 3D
+	 * model) rather than drawing its flat icon on the head; nothing loads it.
+	 */
 	private static Item wearable(String path) {
-		return register(path, WearableItem::create, new Item.Properties().stacksTo(1).equippable(EquipmentSlot.HEAD));
+		return register(path, WearableItem::create, new Item.Properties().stacksTo(1)
+				.component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD).setAsset(WORN).build()));
 	}
 
 	/** Named like the add-on's own eggs ("item.spawn_egg.entity.<ns>.<id>" in its converted lang). */

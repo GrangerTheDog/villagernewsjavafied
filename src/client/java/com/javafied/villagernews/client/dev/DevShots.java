@@ -27,7 +27,9 @@ import java.util.List;
  * game directory, the client (once in a world) holds the add-on's items in
  * each view and walks the handbook, taking a screenshot of each
  * ({@code screenshots/devshot-<n>-<step>.png}), then quits. The file is
- * removed first, so it runs once per request. Does nothing otherwise.
+ * removed first, so it runs once per request. If it names steps (say
+ * {@code mannequin, guide}), only the steps starting with those run. Does
+ * nothing otherwise.
  */
 public final class DevShots {
 	private static final String FLAG = VillagerNewsJavafied.MOD_ID + "-devshots";
@@ -40,6 +42,8 @@ public final class DevShots {
 	private static int step = -1;
 	private static int wait;
 	private static GuideScreen guide;
+	private static net.minecraft.world.entity.LivingEntity mannequin;
+	private static Boolean pauseOnLostFocus;
 
 	private DevShots() {
 	}
@@ -49,17 +53,32 @@ public final class DevShots {
 		if (!Files.exists(flag)) {
 			return;
 		}
+		String only;
 		try {
+			only = Files.readString(flag).trim();
 			Files.delete(flag);
 		} catch (Exception e) {
 			return;
 		}
 		steps.add(new Step("scene", DevShots::scene));
+		steps.add(new Step("mannequin-front", () -> mannequin(180)));
+		steps.add(new Step("mannequin-side", () -> mannequin(90)));
+		steps.add(new Step("mannequin-back", () -> mannequin(0)));
+		steps.add(new Step("mannequin-talk-side", () -> {
+			mannequin(90);
+			talk(true);
+		}));
+		steps.add(new Step("mannequin-talk-front", () -> {
+			mannequin(180);
+			talk(true);
+		}));
 		hold("mic-third-front", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_FRONT);
 		hold("mic-third-back", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_BACK);
 		hold("mic-first", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.FIRST_PERSON);
 		hold("book-third-front", ModItems.HANDBOOK, ModItems.MICROPHONE, CameraType.THIRD_PERSON_FRONT);
 		hold("book-first", ModItems.HANDBOOK, ModItems.MICROPHONE, CameraType.FIRST_PERSON);
+		hold("talk-first", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.FIRST_PERSON);
+		hold("talk-third-front", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_FRONT);
 		steps.add(new Step("guide-home", () -> GuideBook.load().ifPresent(book -> {
 			guide = new GuideScreen(book);
 			Minecraft.getInstance().setScreenAndShow(guide);
@@ -69,7 +88,14 @@ public final class DevShots {
 		page("guide-triggers", "triggers");
 		steps.add(new Step("guide-search", () -> guide.search("shear")));
 		page("guide-settings", "settings");
-		steps.add(new Step("done", () -> Minecraft.getInstance().stop()));
+		if (!only.isEmpty()) {
+			List<String> wanted = List.of(only.split("[,\\s]+"));
+			steps.removeIf(s -> !s.name().equals("scene") && wanted.stream().noneMatch(s.name()::startsWith));
+		}
+		steps.add(new Step("done", () -> {
+			Minecraft.getInstance().options.pauseOnLostFocus = pauseOnLostFocus;
+			Minecraft.getInstance().stop();
+		}));
 		ClientTickEvents.END_CLIENT_TICK.register(DevShots::tick);
 	}
 
@@ -92,6 +118,8 @@ public final class DevShots {
 				return;
 			}
 			var level = player.level();
+			// What earlier runs left behind (the world is kept): everything spawned here is AI-less.
+			clear(player);
 			player.setYRot(0);
 			player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(ModItems.MAYOR_HAT));
 			spawnVillager(level, player.getX() - 1.5, player.getY(), player.getZ() + 3.5, "mayor");
@@ -106,6 +134,78 @@ public final class DevShots {
 				level.addFreshEntity(wooly);
 			}
 		});
+	}
+
+	/**
+	 * A close-up of the worn and held items: a mannequin (the player's
+	 * model) just ahead, turned to the given yaw, wearing the Mayor Hat with
+	 * the microphone in its right hand and the handbook in its left.
+	 */
+	private static void mannequin(float yaw) {
+		Minecraft minecraft = Minecraft.getInstance();
+		var server = minecraft.getSingleplayerServer();
+		if (server == null || minecraft.player == null) {
+			return;
+		}
+		hideHud(minecraft, true);
+		minecraft.options.setCameraType(CameraType.FIRST_PERSON);
+		minecraft.player.setYRot(0);
+		minecraft.player.setXRot(12);
+		var uuid = minecraft.player.getUUID();
+		server.execute(() -> {
+			var player = server.getPlayerList().getPlayer(uuid);
+			if (player == null) {
+				return;
+			}
+			var level = player.level();
+			player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+			if (mannequin != null) {
+				mannequin.discard();
+			}
+			mannequin = net.minecraft.world.entity.EntityTypes.MANNEQUIN.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			if (mannequin == null) {
+				return;
+			}
+			mannequin.setPos(player.getX(), player.getY(), player.getZ() + 2.2);
+			mannequin.setNoGravity(true);
+			mannequin.setYRot(yaw);
+			mannequin.setYHeadRot(yaw);
+			mannequin.setYBodyRot(yaw);
+			mannequin.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(ModItems.MAYOR_HAT));
+			mannequin.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.MICROPHONE));
+			mannequin.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(ModItems.HANDBOOK));
+			level.addFreshEntity(mannequin);
+		});
+	}
+
+	/** Speaks into the microphone (holds "use") - the mannequin, once it's spawned, or the player. */
+	private static void talk(boolean byMannequin) {
+		Minecraft minecraft = Minecraft.getInstance();
+		var server = minecraft.getSingleplayerServer();
+		if (byMannequin && server != null) {
+			server.execute(() -> {
+				if (mannequin != null) {
+					mannequin.startUsingItem(InteractionHand.MAIN_HAND);
+				}
+			});
+		} else {
+			minecraft.options.keyUse.setDown(true);
+		}
+	}
+
+	private static void hideHud(Minecraft minecraft, boolean hidden) {
+		if (minecraft.gui.hud.isHidden() != hidden) {
+			minecraft.gui.hud.toggle();
+		}
+	}
+
+	/** Removes what earlier steps and runs left (the world is kept): everything spawned here is AI-less. */
+	private static void clear(net.minecraft.server.level.ServerPlayer player) {
+		player.level().getEntities((net.minecraft.world.entity.Entity) null, player.getBoundingBox().inflate(24),
+				e -> e instanceof net.minecraft.world.entity.decoration.Mannequin || e instanceof net.minecraft.world.entity.Mob mob && mob.isNoAi())
+				.forEach(net.minecraft.world.entity.Entity::discard);
+		mannequin = null;
 	}
 
 	private static void spawnVillager(net.minecraft.server.level.ServerLevel level, double x, double y, double z, String character) {
@@ -129,6 +229,10 @@ public final class DevShots {
 			if (server != null && minecraft.player != null) {
 				var uuid = minecraft.player.getUUID();
 				server.execute(() -> {
+					if (mannequin != null) {
+						mannequin.discard();
+						mannequin = null;
+					}
 					var player = server.getPlayerList().getPlayer(uuid);
 					if (player != null) {
 						player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(main));
@@ -138,7 +242,12 @@ public final class DevShots {
 				minecraft.player.setXRot(10);
 				minecraft.player.setYRot(0);
 			}
+			hideHud(minecraft, false);
 			minecraft.options.setCameraType(camera);
+			minecraft.options.keyUse.setDown(false);
+			if (name.startsWith("talk")) {
+				talk(false);
+			}
 		}));
 	}
 
@@ -154,6 +263,14 @@ public final class DevShots {
 	private static void tick(Minecraft minecraft) {
 		if (minecraft.player == null || minecraft.level == null) {
 			return;
+		}
+		// Unattended: losing the window's focus mustn't pause the game.
+		if (pauseOnLostFocus == null) {
+			pauseOnLostFocus = minecraft.options.pauseOnLostFocus;
+		}
+		minecraft.options.pauseOnLostFocus = false;
+		if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.PauseScreen) {
+			minecraft.gui.setScreen(null);
 		}
 		if (wait > 0) {
 			wait--;

@@ -5,6 +5,7 @@ import com.javafied.villagernews.content.ModAttachments;
 import com.google.gson.JsonElement;
 
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.sheep.Sheep;
@@ -80,6 +81,10 @@ final class EntityQueries implements ObjectValue {
 				Vec3 v = entity.getDeltaMovement();
 				yield Value.of(Math.sqrt(v.x * v.x + v.z * v.z) * 20);
 			}
+			// Seconds the main hand's item has been in use (the microphone, held up to speak into), 0 if it isn't.
+			case "main_hand_item_use_duration" -> Value.of(living != null && living.isUsingItem()
+					&& living.getUsedItemHand() == InteractionHand.MAIN_HAND
+					? living.getTicksUsingItem(partialTick) / 20.0 : 0);
 			case "vertical_speed" -> Value.of(entity.getDeltaMovement().y * 20);
 			case "target_x_rotation" -> Value.of(entity.getXRot(partialTick));
 			case "target_y_rotation" -> Value.of(living != null
