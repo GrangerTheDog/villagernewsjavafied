@@ -44,6 +44,16 @@ public final class ModAttachments {
 			VillagerNewsJavafied.id("received_handbook"),
 			builder -> builder.persistent(Codec.BOOL).copyOnDeath());
 
+	/** Set on villagers placed by village generation until they first load (see {@link SpecialCharacters}). */
+	public static final AttachmentType<Boolean> FROM_VILLAGE_GENERATION = AttachmentRegistry.create(
+			VillagerNewsJavafied.id("from_village_generation"),
+			builder -> builder.persistent(Codec.BOOL));
+
+	/** On the overworld: add-on character id -> "uuid,x,z" of where each special character appeared. */
+	public static final AttachmentType<Map<String, String>> SPECIAL_CHARACTERS = AttachmentRegistry.create(
+			VillagerNewsJavafied.id("special_characters"),
+			builder -> builder.persistent(Codec.unboundedMap(Codec.STRING, Codec.STRING)));
+
 	private ModAttachments() {
 	}
 
