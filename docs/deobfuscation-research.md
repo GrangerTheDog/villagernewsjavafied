@@ -158,3 +158,18 @@ When version N+1 appears, match old ids to new ids by fingerprint:
 | Full pack or script deobfuscation | Not planned | — |
 
 **Would our code adapt to a new version?** The data-driven 90% (visuals, animations, sounds, dialog data, sensor reactions) would, automatically. The hand-ported 10% (specific reactions, item interactions, item ids) would not. How much work that is depends on the setup: a few minutes of review with a mapping plus matcher, about a session with the mapping alone, or 1–2 sessions of detective work as things stand today.
+
+---
+
+## 7. Update: what another port taught us
+
+We studied a public Fabric port of the same add-on for its *methods* only. Its jar and repo bundle the add-on's converted models, textures and sounds, so nothing was taken from it. Three findings change the picture above.
+
+1. **The add-on documents itself.** Its script holds a guide entry for each dialog, keyed by the dialog id: `[<table>.<dialog id>]: {title: "Approach a Villager", body: "Trigger … Reaction …"}`. **378 of the 523 dialogs** carry an English title plus a trigger/reaction description; the rest are mostly conversation parts and line variants. The guide text isn't obfuscated, so:
+   - **The mapping layer can be mostly generated.** Readable names come straight from the guide titles (`xfpjxq` → "Approach a Villager"), and a human only reviews them.
+   - **The matcher for a new add-on version gets much easier.** Match old and new dialog ids by guide title and body first, and use sound hashes only for the rest.
+   - **We get a porting checklist.** `tools/dialog_coverage.py` builds one locally (in `dev/dialog-coverage.md`): each dialog's trigger, and whether the port reaches it yet. At the time of writing: 74 of 523.
+2. **The obfuscation has holes.** A few names survived: `DIALOG_CHEST`, `DIALOG_JUKEBOX`, `DIALOG_CRAFTING_TABLE`. The block reactions sit in shape-recognisable tables (`new Map([["minecraft:<block>", <dialog>], …])`), so the converter can extract them the same way it extracts dialogs.
+3. **Bedrock's `sheep` material reads texture alpha as a dye mask**, not as opacity (Wooly's skin is alpha 3). The converter now makes those pixels opaque.
+
+For comparison, the other port bundles pre-converted assets for Entity Model Features / Texture Features / Sound Features. That's simpler to run, but it redistributes the add-on. Ours converts the player's own copy on their device and interprets the add-on's logic at runtime. This note's recommendation stands, and point 1 makes option 1 (the mapping layer) cheaper than estimated in §6: roughly a quarter of a session, most of it generated.
