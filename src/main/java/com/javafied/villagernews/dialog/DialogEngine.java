@@ -472,6 +472,7 @@ public final class DialogEngine {
 
 	private void tick() {
 		long now = now();
+		List<Speech> finished = new ArrayList<>();
 		for (Iterator<Speech> it = speeches.values().iterator(); it.hasNext(); ) {
 			Speech speech = it.next();
 			LivingEntity speaker = speech.speaker();
@@ -481,10 +482,14 @@ public final class DialogEngine {
 			}
 			if (now >= speech.releaseTick()) {
 				it.remove();
-				LISTENERS.forEach(listener -> listener.accept(speech, true));
+				finished.add(speech);
 				continue;
 			}
 			holdStill(speech);
+		}
+		// After the loop: a listener may start the next line (a conversation's answer) straight away.
+		for (Speech speech : finished) {
+			LISTENERS.forEach(listener -> listener.accept(speech, true));
 		}
 		if (now % QUEUE_INTERVAL == 0) {
 			drainQueue(now);
@@ -515,21 +520,22 @@ public final class DialogEngine {
 		}
 	}
 
+	/** Over a copy: starting a line can cut another short, and its listeners may queue new requests. */
 	private void drainQueue(long now) {
-		for (Iterator<Request> it = queue.iterator(); it.hasNext(); ) {
-			Request request = it.next();
+		for (Request request : List.copyOf(queue)) {
 			LivingEntity speaker = request.speaker();
 			if (now >= request.expires() || !speaker.isAlive()) {
-				it.remove();
+				queue.remove(request);
 				if (speaker.isAlive()) {
 					refuse(speaker, request.dialog().id(), "gave up waiting for its turn");
 				}
 				continue;
 			}
-			boolean paced = request.options().urgent() || now - lastStart >= START_GAP_TICKS && (superChatty() || speakers() < MAX_SPEAKERS);
+			boolean paced = request.options().urgent()
+					|| now - lastStart >= START_GAP_TICKS && (superChatty() || speakers() < MAX_SPEAKERS);
 			boolean ready = request.options().ready() == null || request.options().ready().test(speaker);
 			if (paced && ready && steady(speaker) && start(speaker, request.dialog(), request.options())) {
-				it.remove();
+				queue.remove(request);
 			}
 		}
 	}

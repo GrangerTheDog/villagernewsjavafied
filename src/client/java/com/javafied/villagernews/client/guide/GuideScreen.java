@@ -92,6 +92,8 @@ public final class GuideScreen extends Screen {
 		if (layout == null) {
 			return;
 		}
+		// The page's own layout first: the outer one only places the scroll area (as vanilla's screens do).
+		scroll.arrangeElements();
 		scroll.setMaxHeight(layout.getContentHeight());
 		layout.arrangeElements();
 	}
