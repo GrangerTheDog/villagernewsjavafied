@@ -86,6 +86,10 @@ public final class DevShots {
 			mannequin(180);
 			talk(true);
 		}));
+		steps.add(new Step("sleep", DevShots::sleep));
+		steps.add(new Step("sleep-wake", () -> onServer(player -> player.level().getEntitiesOfClass(
+				net.minecraft.world.entity.npc.villager.Villager.class, player.getBoundingBox().inflate(8)).forEach(
+				net.minecraft.world.entity.LivingEntity::stopSleeping))));
 		steps.add(new Step("trader", DevShots::trader));
 		steps.add(new Step("trader-hit", () -> onServer(player -> {
 			var trader = player.level().getEntitiesOfClass(net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader.class,
@@ -247,6 +251,47 @@ public final class DevShots {
 			level.addFreshEntity(trader);
 			server(player).getCommands().performPrefixedCommand(player.createCommandSourceStack(), "villagernews debug");
 		});
+	}
+
+	/**
+	 * A villager and the Mayor asleep in beds a few blocks ahead, lying
+	 * across the view (heads to the left); the next step wakes them.
+	 */
+	private static void sleep() {
+		Minecraft minecraft = Minecraft.getInstance();
+		hideHud(minecraft, true);
+		minecraft.options.setCameraType(CameraType.FIRST_PERSON);
+		if (minecraft.player != null) {
+			minecraft.player.setYRot(0);
+			minecraft.player.setXRot(35);
+		}
+		onServer(player -> {
+			clear(player);
+			var level = player.level();
+			net.minecraft.core.BlockPos base = player.blockPosition();
+			bedWithSleeper(level, base.offset(0, 0, 3), "villager");
+			bedWithSleeper(level, base.offset(0, 0, 5), "mayor");
+		});
+	}
+
+	private static void bedWithSleeper(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos foot, String character) {
+		var facing = net.minecraft.core.Direction.EAST;
+		var head = foot.relative(facing);
+		var bed = net.minecraft.world.level.block.Blocks.BED.red().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.BedBlock.FACING, facing);
+		level.setBlockAndUpdate(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+				net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+		level.setBlockAndUpdate(head, bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+				net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+		var villager = net.minecraft.world.entity.EntityTypes.VILLAGER.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+		if (villager == null) {
+			return;
+		}
+		villager.setPos(head.getX() + 0.5, head.getY() + 0.6875, head.getZ() + 0.5);
+		villager.setAttached(ModAttachments.VILLAGER_VARIANT, character);
+		villager.setNoAi(true);
+		level.addFreshEntity(villager);
+		villager.startSleeping(head);
 	}
 
 	private static void onServer(java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> action) {

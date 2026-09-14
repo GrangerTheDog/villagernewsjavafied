@@ -7,10 +7,15 @@ import com.geckolib.renderer.GeoReplacedEntityRenderer;
 import com.geckolib.renderer.base.BoneSnapshots;
 import com.geckolib.renderer.base.RenderPassInfo;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
@@ -24,6 +29,9 @@ import java.util.Locale;
  */
 public class BedrockEntityRenderer<E extends Entity, R extends EntityRenderState>
 		extends GeoReplacedEntityRenderer<BedrockAnimatable, E, R> {
+	/** From the pillow block's centre (where Java puts a sleeper) to the middle of the bed, in blocks. */
+	private static final float BED_MIDDLE = 0.5f;
+
 	public BedrockEntityRenderer(EntityRendererProvider.Context context, BedrockGeoModel model, BedrockAnimatable animatable) {
 		super(context, model, animatable);
 		withRenderLayer(new BedrockLayersRenderLayer<>(this));
@@ -35,6 +43,27 @@ public class BedrockEntityRenderer<E extends Entity, R extends EntityRenderState
 			case EMISSIVE -> RenderTypes.entityTranslucentEmissive(texture);
 			default -> RenderTypes.entityCutout(texture);
 		};
+	}
+
+	/**
+	 * A sleeping villager: the add-on's own sleep animation lays the model
+	 * down on its back, feet first, from a point about half a bed along - so
+	 * Java's lying-down turn on top of it would stand it on its head. It only
+	 * needs facing along the bed (feet to the foot) and moving from the pillow
+	 * block, where Java puts sleepers, to the middle of the bed.
+	 */
+	@Override
+	protected void applyRotations(RenderPassInfo<R> pass, PoseStack poseStack, float nativeScale) {
+		if (pass.renderState() instanceof LivingEntityRenderState living && living.hasPose(net.minecraft.world.entity.Pose.SLEEPING)
+				&& living.bedOrientation != null) {
+			Direction towardsFoot = living.bedOrientation.getOpposite();
+			// GeckoLib has already moved it (eye height - 0.1) towards the foot; make that half a block.
+			float further = BED_MIDDLE - Math.max(0, living.eyeHeight - 0.1f);
+			poseStack.translate(towardsFoot.getStepX() * further, 0, towardsFoot.getStepZ() * further);
+			poseStack.mulPose(Axis.YP.rotationDegrees(180 - towardsFoot.toYRot()));
+			return;
+		}
+		super.applyRotations(pass, poseStack, nativeScale);
 	}
 
 	/** The first layer's material; invisible entities as GeckoLib has them (hidden, or see-through to spectators). */
