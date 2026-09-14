@@ -15,6 +15,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
@@ -58,6 +59,7 @@ public final class VillagerRoutineReactions {
 			"jeb_", new String[] {"armupg", NAMED_BABY}, "dragon", new String[] {NAMED, "cmrqhw"},
 			"Dragon", new String[] {NAMED, "cmrqhw"});
 	private static final String GATHERING = "ebfifz";
+	private static final String CANNOT_FIND_BELL = "trphsn";
 	private static final String GOSSIP = "wrjbdd";
 	/** The gossip conversation's first part (its chain is in the library's conversations). */
 	private static final String GOSSIP_CHAIN = "wrjbddswxeva";
@@ -222,9 +224,19 @@ public final class VillagerRoutineReactions {
 			String starter = ThreadLocalRandom.current().nextBoolean() ? GOSSIP : GOSSIP_CHAIN;
 			VillagerReactions.startConversation(engine, villager, partner, starter);
 		} else {
-			Reactions.say(villager, GATHERING, Options.DEFAULT);
+			Reactions.say(villager, knowsBell(villager) ? GATHERING : CANNOT_FIND_BELL, Options.DEFAULT);
 		}
 		return true;
+	}
+
+	/**
+	 * Whether the villager has a village bell to gather at: in Java, a meeting
+	 * point it remembers in this dimension. (The script's own check was left
+	 * as a stub that always finds one, so "Cannot Find the Bell" never played.)
+	 */
+	private static boolean knowsBell(Villager villager) {
+		return villager.getBrain().getMemory(MemoryModuleType.MEETING_POINT)
+				.filter(point -> point.dimension() == villager.level().dimension()).isPresent();
 	}
 
 	private static boolean gathers(Villager villager, long time) {

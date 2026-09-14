@@ -39,6 +39,15 @@ public final class ModAttachments {
 					.syncWith(ByteBufCodecs.<ByteBuf, String, String, Map<String, String>>map(HashMap::new,
 							ByteBufCodecs.STRING_UTF8, ByteBufCodecs.STRING_UTF8), AttachmentSyncPredicate.all()));
 
+	/**
+	 * Set while a villager runs from something - panicking, or the Untouchable
+	 * keeping away from players: Bedrock's {@code q.is_avoiding_mobs}, which
+	 * the add-on's running animations read on the client.
+	 */
+	public static final AttachmentType<Boolean> AVOIDING = AttachmentRegistry.create(
+			VillagerNewsJavafied.id("avoiding"),
+			builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all()));
+
 	/** Whether this player was already handed the add-on's handbook. */
 	public static final AttachmentType<Boolean> RECEIVED_HANDBOOK = AttachmentRegistry.create(
 			VillagerNewsJavafied.id("received_handbook"),

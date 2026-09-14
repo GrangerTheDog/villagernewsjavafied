@@ -20,6 +20,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -40,8 +41,10 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Hand port of the add-on script's item interactions: give a villager a hat,
  * the microphone or the moustache to wear, take it back with shears - or,
- * failing that, its nose - and hand the nose back. Plus the reaction to a
- * player wearing a villager's nose, and the handbook every player starts with.
+ * failing that, its nose - and hand the nose back. A sign to hold up (an axe
+ * turns it to the next of its messages, shears take it back). Plus the
+ * reaction to a player wearing a villager's nose, and the handbook every
+ * player starts with.
  */
 public final class VillagerItemReactions {
 	/** The add-on property holding what a villager wears ("none" or an item id's path). */
@@ -49,6 +52,14 @@ public final class VillagerItemReactions {
 	/** Whether the villager still has its nose. */
 	private static final String NOSE = "p:gcfsvg";
 	private static final String NONE = "none";
+	/** Which sign a villager holds up: the wood's index in {@link #SIGN_WOODS}, -1 for none. */
+	private static final String SIGN = "p:sign";
+	/** Which of the sign's messages faces out. */
+	private static final String SIGN_MESSAGE = "p:wjnyei";
+	private static final int SIGN_MESSAGES = 87;
+	private static final List<String> SIGN_WOODS = List.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
+			"mangrove", "cherry", "pale_oak", "bamboo", "crimson", "warped");
+	private static final String GIVEN_SIGN = "vqlrqf";
 
 	private static final String TAKEN_ACCESSORY = "ckjbyd";
 	private static final String TAKEN_NOSE = "jktrnd";
@@ -75,7 +86,9 @@ public final class VillagerItemReactions {
 				return InteractionResult.PASS;
 			}
 			ItemStack stack = player.getItemInHand(hand);
-			if (!stack.is(Items.SHEARS) && !stack.is(ModItems.VILLAGER_NOSE) && !ACCESSORIES.contains(itemPath(stack))) {
+			boolean signs = Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !villager.isBaby()
+					&& (signWood(stack) >= 0 || (stack.is(ItemTags.AXES) || stack.is(Items.SHEARS)) && holdsSign(villager));
+			if (!signs && !stack.is(Items.SHEARS) && !stack.is(ModItems.VILLAGER_NOSE) && !ACCESSORIES.contains(itemPath(stack))) {
 				return InteractionResult.PASS;
 			}
 			if (level instanceof ServerLevel server) {
@@ -83,7 +96,10 @@ public final class VillagerItemReactions {
 				if (definition == null) {
 					return InteractionResult.PASS; // add-on not converted: leave vanilla alone
 				}
-				interact(server, player, villager, stack, new BehaviorProperties(villager, definition));
+				BehaviorProperties properties = new BehaviorProperties(villager, definition);
+				if (!signs || !sign(server, player, villager, stack, properties)) {
+					interact(server, player, villager, stack, properties);
+				}
 			}
 			return InteractionResult.SUCCESS;
 		});
@@ -137,6 +153,77 @@ public final class VillagerItemReactions {
 					: special == null ? List.of(DRESSES_THEMSELVES) : List.of(DRESSES_THEMSELVES, special, special);
 			react(villager, player, options.get(ThreadLocalRandom.current().nextInt(options.size())), State.ADULT);
 		}
+	}
+
+	/**
+	 * The script's sign handling: hand a villager a sign (swapping out the one
+	 * it holds, and the microphone - both go in its hands), turn it with an
+	 * axe (sneak to turn it back), take it with shears.
+	 * @return whether the sign handling took the interaction
+	 */
+	private static boolean sign(ServerLevel level, Player player, Villager villager, ItemStack stack, BehaviorProperties properties) {
+		int held = properties.get(SIGN) instanceof Double index ? index.intValue() : -1;
+		boolean creative = player.getAbilities().instabuild;
+		if (stack.is(Items.SHEARS)) {
+			if (held < 0) {
+				return false;
+			}
+			if (!creative) {
+				dropFromHands(level, villager, signItem(held));
+			}
+			level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.SHEEP_SHEAR, SoundSource.NEUTRAL, 1f, 1f);
+			properties.set(SIGN, new JsonPrimitive(-1));
+			return true;
+		}
+		if (stack.is(ItemTags.AXES)) {
+			int message = properties.get(SIGN_MESSAGE) instanceof Double index ? index.intValue() : 0;
+			properties.set(SIGN_MESSAGE, new JsonPrimitive(Math.floorMod(message + (player.isShiftKeyDown() ? -1 : 1), SIGN_MESSAGES)));
+			level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.HORSE_STEP_WOOD, SoundSource.NEUTRAL, 1f, 1f);
+			return true;
+		}
+		int given = signWood(stack);
+		if (given == held) {
+			return true;
+		}
+		if (ITEM_MICROPHONE.equals(properties.get(ACCESSORY))) {
+			level.addFreshEntity(new ItemEntity(level, villager.getX(), villager.getEyeY(), villager.getZ(),
+					new ItemStack(BuiltInRegistries.ITEM.getValue(VillagerNewsJavafied.id(ITEM_MICROPHONE)))));
+			properties.set(ACCESSORY, new JsonPrimitive(NONE));
+		}
+		if (!creative) {
+			stack.shrink(1);
+			if (held >= 0) {
+				dropFromHands(level, villager, signItem(held));
+			}
+		}
+		level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.HORSE_STEP_WOOD, SoundSource.NEUTRAL, 1f, 1f);
+		properties.set(SIGN, new JsonPrimitive(given));
+		if (held < 0) {
+			properties.set(SIGN_MESSAGE, new JsonPrimitive(ThreadLocalRandom.current().nextInt(SIGN_MESSAGES)));
+		}
+		Reactions.say(villager, GIVEN_SIGN, Options.DEFAULT);
+		return true;
+	}
+
+	/** The wood of a (standing, not hanging) sign item, -1 if it isn't one. */
+	private static int signWood(ItemStack stack) {
+		Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+		return id.getNamespace().equals("minecraft") && id.getPath().endsWith("_sign") && !id.getPath().endsWith("_hanging_sign")
+				? SIGN_WOODS.indexOf(id.getPath().substring(0, id.getPath().length() - "_sign".length())) : -1;
+	}
+
+	private static ItemStack signItem(int wood) {
+		return new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace(SIGN_WOODS.get(wood) + "_sign")));
+	}
+
+	private static boolean holdsSign(Villager villager) {
+		String held = villager.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.of()).get(SIGN);
+		return held != null && !held.equals("-1");
+	}
+
+	private static void dropFromHands(ServerLevel level, Villager villager, ItemStack stack) {
+		ItemEntity item = new ItemEntity(level, villager.getX(), villager.getY() + 0.5, villager.getZ(), stack);
+		level.addFreshEntity(item);
 	}
 
 	private static String itemPath(ItemStack stack) {

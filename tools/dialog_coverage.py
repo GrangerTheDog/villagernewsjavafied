@@ -27,7 +27,7 @@ FORMATTING = re.compile(r"§.")
 
 
 def clean(text):
-    return FORMATTING.sub("", text.encode().decode("unicode_escape")).strip()
+    return FORMATTING.sub("", text.encode("latin-1", "backslashreplace").decode("unicode_escape")).strip()
 
 
 def main():
@@ -59,6 +59,14 @@ def main():
         effects = json.loads(entity.read_text())["minecraft:client_entity"]["description"].get("sound_effects", {})
         death |= set(effects.values())
     by_sound = {d for d, v in dialogs.items() if v["lines"] and all(l["sound"] in hurt | death for l in v["lines"])}
+    # The resource pack's own controllers play some lines (death cries): an animation named after the line's sound id.
+    bedrock = ROOT / "dev/converted/assets/villagernewsjavafied/bedrock"
+    played = set()
+    for controllers in (bedrock / "animation_controllers").glob("*.json"):
+        for controller in json.loads(controllers.read_text()).get("animation_controllers", {}).values():
+            for state in controller.get("states", {}).values():
+                played |= {a if isinstance(a, str) else next(iter(a)) for a in state.get("animations", [])}
+    by_sound |= {d for d, v in dialogs.items() if v["lines"] and all(l["sound"].split(":")[-1] in played for l in v["lines"])}
 
     rows = []
     for dialog_id, dialog in dialogs.items():

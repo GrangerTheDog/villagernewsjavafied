@@ -1,5 +1,7 @@
 package com.javafied.villagernews.client.bedrock;
 
+import com.javafied.villagernews.content.ModAttachments;
+
 import com.google.gson.JsonElement;
 
 import net.minecraft.util.Mth;
@@ -62,6 +64,7 @@ final class EntityQueries implements ObjectValue {
 			case "has_rider" -> Value.of(entity.isVehicle());
 			case "is_sleeping" -> Value.of(living != null && living.isSleeping());
 			case "is_on_fire" -> Value.of(entity.isOnFire());
+			case "is_avoiding_mobs" -> Value.of(Boolean.TRUE.equals(entity.getAttached(ModAttachments.AVOIDING)));
 			case "is_sheared" -> Value.of(entity instanceof Sheep sheep && sheep.isSheared());
 			case "health" -> Value.of(living != null ? living.getHealth() : 0);
 			case "life_time" -> Value.of((entity.tickCount + partialTick) / 20.0);

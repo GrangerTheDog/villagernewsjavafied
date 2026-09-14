@@ -213,9 +213,25 @@ class BedrockRuntimeTest {
 		assertTexturesExist(plan);
 	}
 
+	@Test
+	void villagerHoldsTheSignItWasGiven() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		int base = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1), 0).layers().size();
+		RenderPlan plan = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1,
+				Map.of("p:sign", new com.google.gson.JsonPrimitive(3), "p:wjnyei", new com.google.gson.JsonPrimitive(10))), 0);
+		plan.layers().forEach(layer -> System.out.println("  with sign: " + layer));
+		assertTrue(plan.layers().size() > base, "sign layers");
+		assertTrue(plan.layers().stream().anyMatch(layer -> SignTextures.isGenerated(layer.texture())
+				&& layer.texture().getPath().endsWith("/jungle.png")), "the jungle sign board, from Java's sign texture");
+		assertTrue(plan.layers().stream().anyMatch(layer -> Math.abs(layer.vOffset() - 10 / 87f) < 1e-6),
+				"its 11th message scrolled into view");
+		assertTexturesExist(plan);
+	}
+
 	private static void assertTexturesExist(RenderPlan plan) {
 		for (Layer layer : plan.layers()) {
-			assertTrue(Files.exists(ASSETS.resolve(layer.texture().getPath())), "missing texture " + layer.texture());
+			assertTrue(SignTextures.isGenerated(layer.texture()) || Files.exists(ASSETS.resolve(layer.texture().getPath())),
+					"missing texture " + layer.texture());
 			assertTrue(Files.exists(ASSETS.resolve("geckolib/models/" + layer.model().getPath() + ".geo.json")),
 					"missing model " + layer.model());
 		}

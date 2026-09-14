@@ -4,10 +4,19 @@ import com.javafied.villagernews.dialog.DialogEngine.Options;
 import com.javafied.villagernews.dialog.DialogEngine.State;
 import com.javafied.villagernews.dialog.Speakers.Kind;
 
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raid;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SpawnEggItem;
 
 import java.util.HashSet;
 import java.util.List;
@@ -21,7 +30,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * trade window opens (friendlier the better the player's reputation - the
  * special characters and the trader have their own), a comment on each
  * purchase, a goodbye that depends on whether anything was bought, and a
- * cheer when a villager levels up.
+ * cheer when a villager levels up. Plus two refusals to trade the add-on
+ * ships without using: during a raid, and with a player it detests.
  */
 public final class TradeReactions {
 	/** Greetings by the player's reputation with the villager; the one closest to it is used. */
@@ -41,6 +51,15 @@ public final class TradeReactions {
 			Kind.TRADER, new Lines("yubpbb", "laztau", "uzdvsi", "erbcfn", "bvrbhy"));
 	private static final String LEVELLED_UP = "fltegg";
 	private static final String REACHED_MASTER = "pnvkfy";
+	/** Refusals the add-on ships but never uses: during a raid, and to a player the villager can't stand. */
+	private static final String REFUSES_DURING_RAID = "klabhl";
+	private static final String REFUSES_DISLIKED_PLAYER = "lhdgsy";
+	/**
+	 * At or below this reputation a villager won't trade with the player at
+	 * all. Java's reputation runs down to -700 (iron golems turn on a player
+	 * below -100); this takes killing a few villagers in front of the others.
+	 */
+	static final int REFUSES_AT_REPUTATION = -450;
 	/** Trading dialogs don't interrupt each other (the script's zcphsg). */
 	private static final Set<String> TRADE_DIALOGS = new HashSet<>(GREETING_BY_REPUTATION.values());
 
@@ -52,13 +71,37 @@ public final class TradeReactions {
 				}
 			}
 		}
-		TRADE_DIALOGS.addAll(List.of(LEVELLED_UP, REACHED_MASTER));
+		TRADE_DIALOGS.addAll(List.of(LEVELLED_UP, REACHED_MASTER, REFUSES_DURING_RAID, REFUSES_DISLIKED_PLAYER));
 	}
 
 	private static final Map<AbstractVillager, Boolean> boughtSomething = new WeakHashMap<>();
 	private static final Map<AbstractVillager, Long> lastPurchaseComment = new WeakHashMap<>();
 
 	private TradeReactions() {
+	}
+
+	/** Before the trade window opens: a villager may refuse (and shake its head, as with nothing to sell). */
+	public static void init() {
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (hand != InteractionHand.MAIN_HAND || !(level instanceof ServerLevel server) || !(entity instanceof Villager villager)
+					|| Speakers.kindOf(villager) != Kind.VILLAGER || villager.isBaby() || villager.isSleeping() || villager.isTrading()
+					|| !employed(villager) || player.isSecondaryUseActive() || DialogEngine.get() == null) {
+				return InteractionResult.PASS;
+			}
+			ItemStack held = player.getItemInHand(hand);
+			if (held.is(Items.NAME_TAG) || held.is(Items.LEAD) || held.getItem() instanceof SpawnEggItem) {
+				return InteractionResult.PASS;
+			}
+			Raid raid = server.getRaidAt(villager.blockPosition());
+			String refusal = raid != null && !raid.isOver() ? REFUSES_DURING_RAID
+					: villager.getPlayerReputation(player) <= REFUSES_AT_REPUTATION ? REFUSES_DISLIKED_PLAYER : null;
+			if (refusal == null) {
+				return InteractionResult.PASS;
+			}
+			villager.setUnhappyCounter(40);
+			say(villager, player, refusal);
+			return InteractionResult.SUCCESS;
+		});
 	}
 
 	public static void tradingChanged(AbstractVillager merchant, Player before, Player after) {

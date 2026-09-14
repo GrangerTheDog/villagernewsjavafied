@@ -60,6 +60,8 @@ public final class VillagerReactions {
 	// Dialog tags the hurt reaction respects.
 	private static final String TAG_NO_HURT_VOICE = "ouqfaa";
 	private static final String TAG_KEEPS_TALKING = "auevko";
+	private static final String GETS_HURT = "wyvzhk";
+	private static final String BABY_GETS_HURT = "ecslqo";
 
 	private static final Set<String> COLD_BIOMES = Set.of("snowy_beach", "snowy_taiga", "deep_cold_ocean",
 			"deep_frozen_ocean", "frozen_ocean", "frozen_peaks", "frozen_river", "snowy_plains", "ice_spikes",
@@ -84,6 +86,12 @@ public final class VillagerReactions {
 	/** Conversation groups by noses: both villagers have theirs / neither / one of them. */
 	private static final String GROUP_NO_NOSES = "loicsw";
 	private static final String GROUP_ONE_NOSE = "bygaxw";
+	/**
+	 * "Ah, what happened to your nose?" - the script's table lists that line as
+	 * its own answer, leaving the nose-less villager's reply unused; restored.
+	 */
+	private static final Map<String, List<String>> RESTORED_CONVERSATIONS = Map.of("bygaxwhiqnpi",
+			List.of("bygaxwhiqnpi", "bygaxwmwtiaf"));
 	private static final double CONVERSATION_DISTANCE = 2.5;
 	private static final int CONVERSATION_REST_TICKS = 1400;
 
@@ -332,7 +340,13 @@ public final class VillagerReactions {
 		if (starters.isEmpty()) {
 			return;
 		}
-		startConversation(engine, villager, partner, starters.get(ThreadLocalRandom.current().nextInt(starters.size())).getFirst());
+		String first = starters.get(ThreadLocalRandom.current().nextInt(starters.size())).getFirst();
+		// Between a villager with a nose and one without, the one with it opens ("Got your nose!").
+		if (group.equals(GROUP_ONE_NOSE) && !mine) {
+			startConversation(engine, partner, villager, first);
+		} else {
+			startConversation(engine, villager, partner, first);
+		}
 	}
 
 	/** Starts the conversation beginning with this dialog (or just that one line, if it starts none). */
@@ -341,8 +355,8 @@ public final class VillagerReactions {
 	}
 
 	static void startConversation(DialogEngine engine, Villager villager, Villager partner, String first, Set<Integer> sameSpeaker) {
-		List<String> parts = engine.library().conversations().stream().filter(c -> c.getFirst().equals(first)).findFirst()
-				.orElse(List.of(first));
+		List<String> parts = RESTORED_CONVERSATIONS.getOrDefault(first, engine.library().conversations().stream()
+				.filter(c -> c.getFirst().equals(first)).findFirst().orElse(List.of(first)));
 		if (engine.speakNow(villager, first, Options.DEFAULT.facing(partner))) {
 			Conversation conversation = new Conversation(villager, partner, parts, sameSpeaker);
 			conversations.put(villager, conversation);
@@ -380,7 +394,13 @@ public final class VillagerReactions {
 		}
 	}
 
-	/** A pained voice line, and whatever it was saying gets cut off (the script's entityHurt handler). */
+	/**
+	 * A pained voice line, and whatever it was saying gets cut off (the script's
+	 * entityHurt handler). The script's table pairs each hurt sound with a line
+	 * of "Villager Gets Hurt" (or the baby one) to lip-sync to, but names the
+	 * animation wrongly, so in Bedrock the mouth never moves; saying the line
+	 * itself - the same recording - restores that, with its subtitle.
+	 */
 	private static void hurt(Villager villager) {
 		DialogEngine engine = DialogEngine.get();
 		if (engine == null || !villager.isAlive()) {
@@ -388,15 +408,19 @@ public final class VillagerReactions {
 		}
 		engine.markHurt(villager);
 		Speech speech = engine.speech(villager);
-		if (speech == null || !speech.dialog().tags().containsKey(TAG_NO_HURT_VOICE)) {
+		boolean keepsTalking = speech != null && speech.dialog().tags().containsKey(TAG_KEEPS_TALKING);
+		if (speech != null && !keepsTalking) {
+			engine.stop(villager);
+		}
+		if (speech != null && speech.dialog().tags().containsKey(TAG_NO_HURT_VOICE)) {
+			return;
+		}
+		if (keepsTalking || !engine.exclaim(villager, villager.isBaby() ? BABY_GETS_HURT : GETS_HURT)) {
 			String sound = pick(engine.library().hurtSounds(villager.isBaby()));
 			if (sound != null) {
 				villager.level().playSound(null, villager.getX(), villager.getY(), villager.getZ(),
 						BedrockSoundIds.holder(sound), SoundSource.NEUTRAL, 1f, 1f);
 			}
-		}
-		if (speech != null && !speech.dialog().tags().containsKey(TAG_KEEPS_TALKING)) {
-			engine.stop(villager);
 		}
 	}
 

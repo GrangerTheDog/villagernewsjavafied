@@ -48,7 +48,11 @@ import java.util.WeakHashMap;
  */
 public final class BedrockRuntime {
 	/** One textured pass over the model: Bedrock renders a render controller once per texture it lists. */
-	public record Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind) {
+	/** @param uOffset,vOffset {@code uv_anim} scrolling, in fractions of the texture */
+	public record Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind, float uOffset, float vOffset) {
+		public Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind) {
+			this(model, texture, kind, 0, 0);
+		}
 	}
 
 	public record BoneVisibility(BonePattern pattern, boolean visible) {
@@ -249,10 +253,12 @@ public final class BedrockRuntime {
 			}
 
 			Identifier model = modelId(MolangProgram.of(rc.geometry()).eval(scope).getAsString());
+			float uOffset = rc.uvOffset().size() == 2 ? (float) MolangProgram.of(rc.uvOffset().get(0)).evalNumber(scope) : 0;
+			float vOffset = rc.uvOffset().size() == 2 ? (float) MolangProgram.of(rc.uvOffset().get(1)).evalNumber(scope) : 0;
 			for (String textureExpression : rc.textures()) {
 				String texture = MolangProgram.of(textureExpression).eval(scope).getAsString();
 				if (!texture.isEmpty()) {
-					layers.add(new Layer(model, textureId(texture), kind));
+					layers.add(new Layer(model, textureId(texture), kind, uOffset, vOffset));
 				}
 			}
 		}
@@ -518,9 +524,13 @@ public final class BedrockRuntime {
 		return VillagerNewsJavafied.id("entity/" + ConverterUtil.slug(geometry));
 	}
 
-	/** "textures/oreville/vn/dil" -> assets/&lt;modid&gt;/textures/oreville/vn/dil.png */
+	/**
+	 * "textures/oreville/vn/dil" -> assets/&lt;modid&gt;/textures/oreville/vn/dil.png;
+	 * the vanilla Bedrock sign textures the add-on borrows are made from Java's (see {@link SignTextures}).
+	 */
 	private static Identifier textureId(String bedrockPath) {
-		return VillagerNewsJavafied.id(bedrockPath.toLowerCase(Locale.ROOT) + ".png");
+		Identifier sign = SignTextures.idFor(bedrockPath);
+		return sign != null ? sign : VillagerNewsJavafied.id(bedrockPath.toLowerCase(Locale.ROOT) + ".png");
 	}
 
 	/** {@code Texture.x} / {@code Geometry.x} / {@code Material.x}: the client entity's name -> value tables. */

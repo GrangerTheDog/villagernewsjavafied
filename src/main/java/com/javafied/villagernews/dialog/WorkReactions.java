@@ -24,7 +24,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * farmer tends crops - and one that hasn't been near its workstation for a
  * long while complains it can't reach it.
  */
-final class WorkReactions {
+public final class WorkReactions {
+	private static final String START_WORK = "qawras";
 	private static final Map<String, String> AT_WORK = Map.ofEntries(Map.entry("armorer", "djpksc"),
 			Map.entry("butcher", "ueczyh"), Map.entry("cartographer", "wuoloh"), Map.entry("cleric", "hkowex"),
 			Map.entry("farmer", "umdvtb"), Map.entry("fisherman", "tgggoh"), Map.entry("fletcher", "fzjope"),
@@ -55,6 +56,17 @@ final class WorkReactions {
 		String profession = Speakers.profession(villager);
 		long time = Math.floorMod(villager.level().getOverworldClockTime(), 24000L);
 		return AT_WORK.containsKey(profession) && !villager.isBaby() && (time < 8000 || time >= 10000 && time < 11000);
+	}
+
+	/**
+	 * Called (through a mixin) when a villager restocks its trades, which Java
+	 * does as it gets to its workstation for its shift: "Start Work", which the
+	 * add-on ships but never triggers.
+	 */
+	public static void restocked(Villager villager) {
+		if (villager.level() instanceof ServerLevel && Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !villager.isBaby()) {
+			Reactions.say(villager, START_WORK, Options.DEFAULT);
+		}
 	}
 
 	/** @return whether a work line was asked for */

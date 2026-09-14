@@ -2,6 +2,7 @@ package com.javafied.villagernews.dialog;
 
 import com.javafied.villagernews.ConvertedPack;
 import com.javafied.villagernews.VillagerNewsJavafied;
+import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.dialog.DialogLibrary.Dialog;
 import com.javafied.villagernews.dialog.DialogLibrary.Line;
 import com.javafied.villagernews.dialog.DialogLibrary.TagCooldown;
@@ -545,10 +546,30 @@ public final class DialogEngine {
 		lastStart = now;
 		speeches.put(speaker, new Speech(speaker, dialog, index, now + line.durationTicks(),
 				now + line.durationTicks() + LINGER_TICKS, options.facing(), options.facingPos(),
-				speaker.onGround() ? speaker.position() : null));
+				speaker.onGround() && !Boolean.TRUE.equals(speaker.getAttached(ModAttachments.AVOIDING)) ? speaker.position() : null));
 		lastSaid.computeIfAbsent(speaker, e -> new HashMap<>()).put(dialog.id(), now);
 		startCooldowns(speaker, dialog, line);
+		broadcast(speaker, line);
+		return true;
+	}
 
+	/**
+	 * A line blurted out on the spot, with none of the engine's bookkeeping -
+	 * no queue, cooldowns or standing still: the hurt voices. False if the
+	 * add-on has no such dialog.
+	 */
+	public boolean exclaim(LivingEntity speaker, String dialogId) {
+		Dialog dialog = library.get(dialogId);
+		if (dialog == null || dialog.lines().isEmpty() || !speaker.isAlive()) {
+			return false;
+		}
+		int index = pickLine(dialog);
+		lastLine.put(dialog.id(), index);
+		broadcast(speaker, dialog.lines().get(index));
+		return true;
+	}
+
+	private static void broadcast(LivingEntity speaker, Line line) {
 		DialogPayloads.Line payload = new DialogPayloads.Line(speaker.getId(), line.sound(), line.animation(),
 				line.durationTicks(), line.subtitles());
 		for (ServerPlayer player : PlayerLookup.tracking(speaker)) {
@@ -556,7 +577,6 @@ public final class DialogEngine {
 				ServerPlayNetworking.send(player, payload);
 			}
 		}
-		return true;
 	}
 
 	private boolean someoneElseTalkingNear(Player listener, Entity speaker) {

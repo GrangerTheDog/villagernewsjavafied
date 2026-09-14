@@ -113,6 +113,26 @@ class MolangProgramTest {
 	}
 
 	@Test
+	void conditionalBlocksAgainstANegativeNumber() {
+		// Verbatim from the add-on's villager pre-animation script: is it holding a sign?
+		String script = "q.has_property('p:sign')&&q.property('p:sign')!=-1?{v.omwttl=1;v.etmflu=q.property('p:sign');}:{v.omwttl=0;};";
+		for (double sign : new double[] {-1, 3}) {
+			MutableObjectBinding v = new MutableObjectBinding();
+			MutableObjectBinding q = new MutableObjectBinding();
+			q.set("has_property", (Function<Object>) (ctx, args) -> Value.of(true));
+			q.set("property", (Function<Object>) (ctx, args) -> Value.of(sign));
+			Scope scope = MolangProgram.newScope();
+			scope.set("v", v);
+			scope.set("q", q);
+			MolangProgram.of(script).eval(scope);
+			assertEquals(sign < 0 ? 0 : 1, v.get("omwttl").getAsNumber(), "holding sign " + sign);
+			if (sign >= 0) {
+				assertEquals(sign, v.get("etmflu").getAsNumber());
+			}
+		}
+	}
+
+	@Test
 	void assignmentBindsLooserThanConditionals() {
 		MutableObjectBinding v = new MutableObjectBinding();
 		Scope scope = MolangProgram.newScope();

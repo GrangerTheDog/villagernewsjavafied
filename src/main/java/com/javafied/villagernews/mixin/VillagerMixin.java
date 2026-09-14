@@ -83,6 +83,12 @@ abstract class VillagerMixin {
 		com.javafied.villagernews.dialog.TradeReactions.levelledUp((Villager) (Object) this);
 	}
 
+	/** Restocking happens as a villager starts its shift at its workstation. */
+	@Inject(method = "restock", at = @At("TAIL"))
+	private void villagernewsjavafied$restocked(CallbackInfo ci) {
+		com.javafied.villagernews.dialog.WorkReactions.restocked((Villager) (Object) this);
+	}
+
 	@Inject(method = "pickUpItem", at = @At("HEAD"))
 	private void villagernewsjavafied$pickedUp(ServerLevel level, ItemEntity item, CallbackInfo ci) {
 		WorldReactions.pickedUp((Villager) (Object) this, item);

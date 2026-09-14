@@ -13,6 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -87,6 +88,10 @@ public final class WorldReactions {
 	private static final String CAUGHT_IN_RAIN = "scbmka";
 	private static final String TRADER_CAUGHT_IN_RAIN = "kxoqky";
 	private static final String SHEEP = "vxycol";
+	private static final String PICKS_UP_ARMOR = "zjwpzi";
+	private static final String PICKS_UP_ENCHANTED_ARMOR = "habfnx";
+	private static final int ARMOR_NOTICE_TICKS = 30 * 20;
+	private static final double ARMOR_REACH = 1.5;
 	private static final String WOOLY_JOINS_IN = "fskcce";
 	private static final String TRADER_DRINKS_POTION = "vggdrt";
 	private static final String TRADER_DRINKS_POTION_ONE_LLAMA = "jkeahu";
@@ -100,6 +105,8 @@ public final class WorldReactions {
 	private static final Set<LivingEntity> panicking = Collections.newSetFromMap(new WeakHashMap<>());
 	private static final Map<Villager, Long> lastWentToBed = new WeakHashMap<>();
 	private static final Map<Villager, Long> lastCampfireTalk = new WeakHashMap<>();
+	/** Armour lying about, with the tick it appeared. */
+	private static final Map<ItemEntity, Long> droppedArmor = new WeakHashMap<>();
 	/** Set while a villager is throwing an item, so the item can be traced back to it. */
 	private static LivingEntity throwing;
 	private static int round;
@@ -120,6 +127,9 @@ public final class WorldReactions {
 			}
 		});
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+			if (entity instanceof ItemEntity item && isArmor(item.getItem())) {
+				droppedArmor.put(item, level.getServer().getTickCount() + 0L);
+			}
 			if (entity instanceof ItemEntity item && throwing != null) {
 				thrownBy.put(item, throwing);
 			} else if (entity instanceof FireworkRocketEntity rocket) {
@@ -263,6 +273,41 @@ public final class WorldReactions {
 			}
 			panics(server);
 		}
+		if (server.getTickCount() % 10 == 5 && !droppedArmor.isEmpty()) {
+			armorNearVillagers(server.getTickCount());
+		}
+	}
+
+	/**
+	 * "Pick Up Armor": Java villagers can't pick armour up, so one standing
+	 * next to a piece lying on the ground says it instead (the add-on ships
+	 * the lines without a trigger).
+	 */
+	private static void armorNearVillagers(long now) {
+		for (var it = droppedArmor.entrySet().iterator(); it.hasNext(); ) {
+			var entry = it.next();
+			ItemEntity item = entry.getKey();
+			if (!item.isAlive() || now - entry.getValue() > ARMOR_NOTICE_TICKS) {
+				it.remove();
+				continue;
+			}
+			if (!item.onGround()) {
+				continue;
+			}
+			String dialog = item.getItem().isEnchanted() ? PICKS_UP_ENCHANTED_ARMOR : PICKS_UP_ARMOR;
+			boolean said = item.level().getEntitiesOfClass(Villager.class, item.getBoundingBox().inflate(ARMOR_REACH),
+							v -> Speakers.kindOf(v) == Speakers.Kind.VILLAGER && !v.isBaby() && !v.isSleeping()).stream()
+					.sorted(java.util.Comparator.comparingDouble(v -> v.distanceToSqr(item)))
+					.anyMatch(v -> Reactions.say(v, dialog, Options.DEFAULT.facing(item)));
+			if (said) {
+				it.remove();
+			}
+		}
+	}
+
+	private static boolean isArmor(net.minecraft.world.item.ItemStack stack) {
+		return stack.is(ItemTags.HEAD_ARMOR) || stack.is(ItemTags.CHEST_ARMOR) || stack.is(ItemTags.LEG_ARMOR)
+				|| stack.is(ItemTags.FOOT_ARMOR);
 	}
 
 	private static void surroundings(ServerLevel level, Villager villager, int size) {

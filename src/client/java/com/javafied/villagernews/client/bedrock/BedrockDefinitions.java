@@ -51,8 +51,9 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 			Map<String, String> soundEffects) {
 	}
 
+	/** @param uvOffset {@code uv_anim}'s offset (u, v; Molang, in fractions of the texture), empty if none */
 	public record RenderController(Map<String, List<String>> arrays, String geometry, List<String> textures,
-			List<BonePattern> materials, List<BonePattern> partVisibility) {
+			List<BonePattern> materials, List<BonePattern> partVisibility, List<String> uvOffset) {
 	}
 
 	public record Snapshot(Map<String, ClientEntity> clientEntities, Map<String, RenderController> renderControllers,
@@ -199,7 +200,8 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 				rc.has("geometry") ? molang(rc.get("geometry")) : "Geometry.default",
 				stringList(rc.get("textures")),
 				bonePatterns(rc.get("materials")),
-				bonePatterns(rc.get("part_visibility")));
+				bonePatterns(rc.get("part_visibility")),
+				rc.has("uv_anim") ? stringList(rc.getAsJsonObject("uv_anim").get("offset")) : List.of());
 	}
 
 	/** Keys lower-cased: Molang identifiers are case-insensitive. */

@@ -58,7 +58,7 @@ class DialogLibraryTest {
 		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class,
 				PlayerActionReactions.class, VillagerLifeReactions.class, BlockUseReactions.class,
 				VillagerRoutineReactions.class, WorldReactions.class, NoticeReactions.class,
-				HurtReactions.class, WorkReactions.class)) {
+				HurtReactions.class, WorkReactions.class, UntouchableReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
 				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
 						|| field.getName().startsWith("GROUP_") || field.getName().startsWith("BLOCK_") || field.getName().equals("TRADE_DIALOGS")) {
@@ -74,6 +74,8 @@ class DialogLibraryTest {
 							ids.add(id);
 						} else if (v instanceof Record record) {
 							addRecordStrings(record, ids);
+						} else if (v instanceof List<?> parts) {
+							parts.stream().filter(String.class::isInstance).map(String.class::cast).forEach(ids::add);
 						}
 					}
 				} else if (value instanceof List<?> list) {

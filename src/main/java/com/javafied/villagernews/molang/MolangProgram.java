@@ -5,6 +5,7 @@ import team.unnamed.mocha.parser.ast.AccessExpression;
 import team.unnamed.mocha.parser.ast.ArrayAccessExpression;
 import team.unnamed.mocha.parser.ast.BinaryExpression;
 import team.unnamed.mocha.parser.ast.CallExpression;
+import team.unnamed.mocha.parser.ast.DoubleExpression;
 import team.unnamed.mocha.parser.ast.ExecutionScopeExpression;
 import team.unnamed.mocha.parser.ast.Expression;
 import team.unnamed.mocha.parser.ast.IdentifierExpression;
@@ -130,6 +131,9 @@ public final class MolangProgram {
 	 * {@code 'none' == 'ufernq'} is true. That hid every villager's hat bone -
 	 * where most job outfits are. {@code ==}/{@code !=} become calls to
 	 * {@link #EQUALS}/{@link #NOT_EQUALS}, bound in every {@link #newScope()}.</li>
+	 * <li>mocha never runs the {@code { }} branches of {@code c ? {...} : {...}}
+	 * (19 of the add-on's scripts - whether a villager holds a sign, its
+	 * dying pose, some secondary motion); see {@link #runBlock}.</li>
 	 * </ul>
 	 */
 	static Expression repair(Expression e) {
@@ -139,9 +143,9 @@ public final class MolangProgram {
 			Expression whenFalse = repair(t.falseExpression());
 			if (condition instanceof BinaryExpression assign && assign.op() == BinaryExpression.Op.ASSIGN) {
 				return new BinaryExpression(BinaryExpression.Op.ASSIGN, assign.left(),
-						new TernaryConditionalExpression(assign.right(), whenTrue, whenFalse));
+						new TernaryConditionalExpression(assign.right(), runBlock(whenTrue), runBlock(whenFalse)));
 			}
-			return new TernaryConditionalExpression(condition, whenTrue, whenFalse);
+			return new TernaryConditionalExpression(condition, runBlock(whenTrue), runBlock(whenFalse));
 		}
 		if (e instanceof BinaryExpression b) {
 			Expression left = repair(b.left());
@@ -174,6 +178,18 @@ public final class MolangProgram {
 			return new AccessExpression(repair(access.object()), access.property());
 		}
 		return e;
+	}
+
+	/**
+	 * mocha evaluates a {@code { }} block to a function and only runs it as the
+	 * body of {@code c ? {...}}; as a branch of {@code c ? {...} : {...}} it is
+	 * never run, so neither branch happens. {@code 1 ? {...}} runs it the way
+	 * the working form does (a {@code return} inside still returns).
+	 */
+	private static Expression runBlock(Expression branch) {
+		return branch instanceof ExecutionScopeExpression
+				? new BinaryExpression(BinaryExpression.Op.CONDITIONAL, DoubleExpression.ONE, branch)
+				: branch;
 	}
 
 	/**
