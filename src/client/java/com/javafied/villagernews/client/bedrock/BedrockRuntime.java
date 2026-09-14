@@ -14,6 +14,7 @@ import com.javafied.villagernews.client.bedrock.BedrockDefinitions.ControllerRef
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.RenderController;
 import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.converter.ConverterUtil;
+import com.javafied.villagernews.converter.TextureConverter;
 import com.javafied.villagernews.molang.MolangProgram;
 import com.javafied.villagernews.names.AddonNames;
 
@@ -50,10 +51,17 @@ import java.util.WeakHashMap;
  */
 public final class BedrockRuntime {
 	/** One textured pass over the model: Bedrock renders a render controller once per texture it lists. */
-	/** @param uOffset,vOffset {@code uv_anim} scrolling, in fractions of the texture */
-	public record Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind, float uOffset, float vOffset) {
+	/**
+	 * @param uOffset,vOffset {@code uv_anim} scrolling, in fractions of the texture
+	 * @param dyed            drawn tinted with the entity's dye colour (the wool of a {@code sheep}-material model)
+	 */
+	public record Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind, float uOffset, float vOffset, boolean dyed) {
 		public Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind) {
-			this(model, texture, kind, 0, 0);
+			this(model, texture, kind, 0, 0, false);
+		}
+
+		public Layer(Identifier model, Identifier texture, BedrockMaterials.Kind kind, float uOffset, float vOffset) {
+			this(model, texture, kind, uOffset, vOffset, false);
 		}
 	}
 
@@ -158,7 +166,7 @@ public final class BedrockRuntime {
 		MutableObjectBinding context = new MutableObjectBinding();
 		context.set("is_first_person", Value.of(firstPerson));
 		context.set("item_slot", StringValue.of(mainHand ? "main_hand" : "off_hand"));
-		EntityQueries queries = new EntityQueries(holder, partialTick, Map.of(), Map.of());
+		EntityQueries queries = new EntityQueries(holder, partialTick, Map.of(), Map.of(), false);
 		RenderPlan plan = plan(defs, ce, state, (holder.tickCount + partialTick) / 20.0, queries, 0, context);
 		state.pendingSounds.clear();
 		return plan;
@@ -191,9 +199,14 @@ public final class BedrockRuntime {
 		if (defaults.containsKey(style)) {
 			overrides.put(style, Value.of(com.javafied.villagernews.client.guide.ClientSettings.style()));
 		}
-		EntityQueries queries = new EntityQueries(entity, partialTick, defaults, overrides);
+		EntityQueries queries = new EntityQueries(entity, partialTick, defaults, overrides, defs.alwaysBaby(ce.identifier()));
 		RenderPlan plan = plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
 				puppet ? VillagerPuppetPort.lift(entity) : 0);
+		float entityScale = defs.entityScale(ce.identifier());
+		if (entityScale != 1f) {
+			// Bedrock scales the whole entity, model included (the Mayor is half size).
+			plan = new RenderPlan(plan.layers(), plan.boneVisibility(), plan.poses(), plan.scale() * entityScale, plan.lift());
+		}
 		for (String sound : state.pendingSounds) {
 			BedrockSounds.playFrom(entity, sound);
 		}
@@ -297,7 +310,9 @@ public final class BedrockRuntime {
 					boneVisibility.add(new BoneVisibility(pattern, visible));
 				}
 			}
-			BedrockMaterials.Kind kind = defs.materials().classify(material(rc, scope));
+			String materialName = material(rc, scope);
+			BedrockMaterials.Kind kind = defs.materials().classify(materialName);
+			boolean dyed = defs.materials().isDyed(materialName);
 			if (!layerVisible || kind == BedrockMaterials.Kind.HIDDEN) {
 				continue;
 			}
@@ -309,6 +324,11 @@ public final class BedrockRuntime {
 				String texture = MolangProgram.of(textureExpression).eval(scope).getAsString();
 				if (!texture.isEmpty()) {
 					layers.add(new Layer(model, textureId(texture), kind, uOffset, vOffset));
+					if (dyed) {
+						// Bedrock's sheep material: the dye tints what the texture's alpha marks (the converter's mask).
+						layers.add(new Layer(model, textureId(texture + TextureConverter.DYE_MASK_SUFFIX), BedrockMaterials.Kind.CUTOUT,
+								uOffset, vOffset, true));
+					}
 				}
 			}
 		}

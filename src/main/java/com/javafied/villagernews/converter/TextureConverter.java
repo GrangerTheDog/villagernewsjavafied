@@ -15,6 +15,9 @@ import java.util.Locale;
  * texture loader silently fails to load (surfaces as "Missing textures").
  */
 public final class TextureConverter {
+	/** Suffix of the dye-mask texture {@link #opaqueDyeMask} writes next to a sheep-material texture. */
+	public static final String DYE_MASK_SUFFIX = "_dye";
+
 	private TextureConverter() {
 	}
 
@@ -83,13 +86,25 @@ public final class TextureConverter {
 	 * Bedrock's {@code sheep} material reads a texture's alpha as a dye mask
 	 * (wool 255, skin and hooves a faint 3) rather than as opacity. Java draws
 	 * alpha as opacity, so the skin would all but vanish: make every pixel
-	 * that isn't fully transparent opaque. (Undyed, the tint is white anyway.)
+	 * that isn't fully transparent opaque - and keep the mask as a texture of
+	 * its own ({@code <name>_dye.png}), which the mod draws over the model
+	 * tinted with the sheep's colour.
 	 */
 	public static void opaqueDyeMask(Path png) throws IOException {
 		if (!Files.exists(png)) {
 			return;
 		}
 		BufferedImage image = read(png);
+		// The mask itself, as its own texture: the pixels the dye colours (the wool), everything else clear.
+		BufferedImage dye = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		for (int y = 0; y < image.getHeight(); y++) {
+			for (int x = 0; x < image.getWidth(); x++) {
+				int argb = image.getRGB(x, y);
+				dye.setRGB(x, y, (argb >>> 24) >= 128 ? argb | 0xFF000000 : 0);
+			}
+		}
+		String name = png.getFileName().toString();
+		writePng(dye, png.resolveSibling(name.substring(0, name.length() - ".png".length()) + DYE_MASK_SUFFIX + ".png"));
 		for (int y = 0; y < image.getHeight(); y++) {
 			for (int x = 0; x < image.getWidth(); x++) {
 				int argb = image.getRGB(x, y);

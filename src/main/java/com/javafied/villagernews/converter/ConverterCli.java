@@ -23,7 +23,7 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 9;
+	public static final int SCHEMA_VERSION = 11;
 
 	private ConverterCli() {
 	}

@@ -49,7 +49,20 @@ final class BedrockLayersRenderLayer<O, R extends GeoRenderState> extends GeoRen
 			SignTextures.ensureLoaded(layer.texture());
 			RenderType renderType = BedrockEntityRenderer.renderType(layer.texture(), layer.kind());
 			RenderPassInfo<R> layerPass = pass;
-			if (!layer.model().equals(baseModel)) {
+			if (layer.dyed()) {
+				Integer dye = pass.getGeckolibData(BedrockGeoModel.DYE_COLOR);
+				if (dye == null) {
+					continue; // nothing dyes it: the base layer already shows it undyed
+				}
+				BakedGeoModel model = renderer.getGeoModel().getBakedModel(layer.model());
+				if (model.isMissingno()) {
+					continue;
+				}
+				ExtraModelPass<R> tinted = new ExtraModelPass<>(pass, model, dye);
+				tinted.addBoneUpdater(renderer::adjustModelBonesForRender);
+				tinted.captureModelRenderPose();
+				layerPass = tinted;
+			} else if (!layer.model().equals(baseModel)) {
 				BakedGeoModel model = renderer.getGeoModel().getBakedModel(layer.model());
 				if (model.isMissingno()) {
 					if (WARNED.add(layer.model())) {

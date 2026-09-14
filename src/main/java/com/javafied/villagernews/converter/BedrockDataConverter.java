@@ -35,7 +35,8 @@ public final class BedrockDataConverter {
 		count += copyDir(resourcePack.resolve("attachables"), outDir.resolve("attachables"), ".json");
 		if (behaviorPack != null) {
 			writePropertyDefaults(behaviorPack.resolve("entities"), outDir.resolve("properties.json"));
-			count++;
+			writeTraits(behaviorPack.resolve("entities"), outDir.resolve("traits.json"));
+			count += 2;
 			// Behavior definitions (sensors, events, properties) for the server-side interpreter.
 			Path server = outputAssetsDir.getParent().getParent().resolve("server");
 			count += copyDir(behaviorPack.resolve("entities"), server.resolve("entities"), ".json");
@@ -81,6 +82,39 @@ public final class BedrockDataConverter {
 	}
 
 	/** { "ns:entity": { "p:prop": default, ... }, ... } */
+	/**
+	 * What the client needs to know about an entity's behavior-pack definition
+	 * to draw it: {@code { "ns:entity": { "baby": true, "scale": 0.5 } }} for
+	 * entities that are always babies ({@code minecraft:is_baby}) or always
+	 * scaled ({@code minecraft:scale}) - the Mayor is both.
+	 */
+	private static void writeTraits(Path entitiesDir, Path target) throws IOException {
+		JsonObject all = new JsonObject();
+		if (Files.isDirectory(entitiesDir)) {
+			try (var stream = Files.walk(entitiesDir)) {
+				for (Path file : stream.filter(p -> p.toString().endsWith(".json")).toList()) {
+					JsonObject entity = ConverterUtil.readJson(file).getAsJsonObject("minecraft:entity");
+					JsonObject components = entity == null ? null : entity.getAsJsonObject("components");
+					if (components == null) {
+						continue;
+					}
+					JsonObject traits = new JsonObject();
+					if (components.has("minecraft:is_baby")) {
+						traits.addProperty("baby", true);
+					}
+					JsonObject scale = components.getAsJsonObject("minecraft:scale");
+					if (scale != null && scale.has("value") && scale.get("value").isJsonPrimitive()) {
+						traits.add("scale", scale.get("value"));
+					}
+					if (traits.size() > 0) {
+						all.add(entity.getAsJsonObject("description").get("identifier").getAsString(), traits);
+					}
+				}
+			}
+		}
+		ConverterUtil.writeJson(target, all);
+	}
+
 	private static void writePropertyDefaults(Path entitiesDir, Path target) throws IOException {
 		JsonObject all = new JsonObject();
 		if (Files.isDirectory(entitiesDir)) {

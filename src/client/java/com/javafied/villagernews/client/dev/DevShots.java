@@ -3,6 +3,7 @@ package com.javafied.villagernews.client.dev;
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.client.guide.GuideBook;
 import com.javafied.villagernews.client.guide.GuideScreen;
+import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
 import com.javafied.villagernews.names.AddonNames;
 
@@ -53,6 +54,7 @@ public final class DevShots {
 		} catch (Exception e) {
 			return;
 		}
+		steps.add(new Step("scene", DevShots::scene));
 		hold("mic-third-front", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_FRONT);
 		hold("mic-third-back", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_BACK);
 		hold("mic-first", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.FIRST_PERSON);
@@ -71,6 +73,55 @@ public final class DevShots {
 		ClientTickEvents.END_CLIENT_TICK.register(DevShots::tick);
 	}
 
+	/**
+	 * Faces the player south, wearing the Mayor Hat, with a Mayor, a
+	 * red-dyed Wooly and a plain villager standing still a few blocks ahead.
+	 */
+	private static void scene() {
+		Minecraft minecraft = Minecraft.getInstance();
+		var server = minecraft.getSingleplayerServer();
+		if (server == null || minecraft.player == null) {
+			return;
+		}
+		minecraft.player.setYRot(0);
+		minecraft.player.setXRot(10);
+		var uuid = minecraft.player.getUUID();
+		server.execute(() -> {
+			var player = server.getPlayerList().getPlayer(uuid);
+			if (player == null) {
+				return;
+			}
+			var level = player.level();
+			player.setYRot(0);
+			player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(ModItems.MAYOR_HAT));
+			spawnVillager(level, player.getX() - 1.5, player.getY(), player.getZ() + 3.5, "mayor");
+			spawnVillager(level, player.getX() + 1.5, player.getY(), player.getZ() + 3.5, "villager");
+			var wooly = net.minecraft.world.entity.EntityTypes.SHEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			if (wooly != null) {
+				wooly.setPos(player.getX(), player.getY(), player.getZ() + 5);
+				wooly.setAttached(ModAttachments.VILLAGER_VARIANT, "wooly");
+				wooly.setColor(net.minecraft.world.item.DyeColor.RED);
+				wooly.setNoAi(true);
+				wooly.setYRot(180);
+				level.addFreshEntity(wooly);
+			}
+		});
+	}
+
+	private static void spawnVillager(net.minecraft.server.level.ServerLevel level, double x, double y, double z, String character) {
+		var villager = net.minecraft.world.entity.EntityTypes.VILLAGER.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+		if (villager == null) {
+			return;
+		}
+		villager.setPos(x, y, z);
+		villager.setAttached(ModAttachments.VILLAGER_VARIANT, character);
+		villager.setNoAi(true);
+		villager.setYRot(180);
+		villager.setYHeadRot(180);
+		villager.setYBodyRot(180);
+		level.addFreshEntity(villager);
+	}
+
 	private static void hold(String name, Item main, Item off, CameraType camera) {
 		steps.add(new Step(name, () -> {
 			Minecraft minecraft = Minecraft.getInstance();
@@ -85,6 +136,7 @@ public final class DevShots {
 					}
 				});
 				minecraft.player.setXRot(10);
+				minecraft.player.setYRot(0);
 			}
 			minecraft.options.setCameraType(camera);
 		}));

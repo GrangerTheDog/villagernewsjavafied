@@ -60,7 +60,19 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 	public record Snapshot(Map<String, ClientEntity> clientEntities, Map<String, RenderController> renderControllers,
 			Map<String, Map<String, JsonElement>> propertyDefaults, BedrockMaterials materials,
 			Map<String, BedrockAnimations.Animation> animations, Map<String, BedrockAnimations.Controller> animationControllers,
-			Map<String, ClientEntity> attachables) {
+			Map<String, ClientEntity> attachables, Map<String, JsonObject> traits) {
+		/** Always a baby, per its behavior-pack definition (the Mayor). */
+		public boolean alwaysBaby(String identifier) {
+			JsonObject t = traits.get(identifier.toLowerCase(Locale.ROOT));
+			return t != null && t.has("baby") && t.get("baby").getAsBoolean();
+		}
+
+		/** Its behavior-pack scale ({@code minecraft:scale}), 1 if none. */
+		public float entityScale(String identifier) {
+			JsonObject t = traits.get(identifier.toLowerCase(Locale.ROOT));
+			return t != null && t.has("scale") ? t.get("scale").getAsFloat() : 1f;
+		}
+
 		/** Like {@link #clientEntity}: a full identifier or just its path. */
 		public ClientEntity attachable(String identifier) {
 			String key = identifier.toLowerCase(Locale.ROOT);
@@ -109,7 +121,7 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 	}
 
 	private static volatile Snapshot current =
-			new Snapshot(Map.of(), Map.of(), Map.of(), BedrockMaterials.EMPTY, Map.of(), Map.of(), Map.of());
+			new Snapshot(Map.of(), Map.of(), Map.of(), BedrockMaterials.EMPTY, Map.of(), Map.of(), Map.of(), Map.of());
 
 	public static Snapshot get() {
 		return current;
@@ -131,8 +143,10 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 		forEach(manager, "bedrock/animation_controllers", ".json", animationControllers::add);
 		List<JsonObject> attachables = new ArrayList<>();
 		forEach(manager, "bedrock/attachables", ".json", attachables::add);
+		List<JsonObject> traits = new ArrayList<>();
+		forEach(manager, "bedrock", "traits.json", traits::add);
 
-		current = parse(clientEntities, renderControllers, materials, properties, animations, animationControllers, attachables);
+		current = parse(clientEntities, renderControllers, materials, properties, animations, animationControllers, attachables, traits);
 		VillagerNewsJavafied.LOGGER.info("Loaded {} Bedrock client entities, {} render controllers, {} animations, {} animation controllers",
 				current.clientEntities().size(), current.renderControllers().size(),
 				current.animations().size(), current.animationControllers().size());
@@ -142,12 +156,17 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 	public static Snapshot parse(List<JsonObject> clientEntityFiles, List<JsonObject> renderControllerFiles,
 			List<JsonObject> materialFiles, List<JsonObject> propertyFiles, List<JsonObject> animationFiles,
 			List<JsonObject> animationControllerFiles) {
-		return parse(clientEntityFiles, renderControllerFiles, materialFiles, propertyFiles, animationFiles, animationControllerFiles, List.of());
+		return parse(clientEntityFiles, renderControllerFiles, materialFiles, propertyFiles, animationFiles, animationControllerFiles,
+				List.of(), List.of());
 	}
 
 	public static Snapshot parse(List<JsonObject> clientEntityFiles, List<JsonObject> renderControllerFiles,
 			List<JsonObject> materialFiles, List<JsonObject> propertyFiles, List<JsonObject> animationFiles,
-			List<JsonObject> animationControllerFiles, List<JsonObject> attachableFiles) {
+			List<JsonObject> animationControllerFiles, List<JsonObject> attachableFiles, List<JsonObject> traitFiles) {
+		Map<String, JsonObject> traits = new HashMap<>();
+		for (JsonObject json : traitFiles) {
+			json.entrySet().forEach(e -> traits.put(e.getKey().toLowerCase(Locale.ROOT), e.getValue().getAsJsonObject()));
+		}
 		Map<String, ClientEntity> attachables = new HashMap<>();
 		for (JsonObject json : attachableFiles) {
 			JsonObject attachable = json.getAsJsonObject("minecraft:attachable");
@@ -187,7 +206,8 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 		Map<String, BedrockAnimations.Controller> controllers = new HashMap<>();
 		animationControllerFiles.forEach(json -> BedrockAnimations.parseControllers(json, controllers));
 		return new Snapshot(Map.copyOf(clientEntities), Map.copyOf(renderControllers), Map.copyOf(properties),
-				BedrockMaterials.parse(materials), Map.copyOf(animations), Map.copyOf(controllers), Map.copyOf(attachables));
+				BedrockMaterials.parse(materials), Map.copyOf(animations), Map.copyOf(controllers), Map.copyOf(attachables),
+				Map.copyOf(traits));
 	}
 
 	private static void forEach(ResourceManager manager, String dir, String suffix, Consumer<JsonObject> consumer) {

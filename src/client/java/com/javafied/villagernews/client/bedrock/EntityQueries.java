@@ -41,7 +41,12 @@ final class EntityQueries implements ObjectValue {
 	/** Property values the add-on's script would have written (see {@link VillagerPuppetPort}); win over defaults. */
 	private final Map<String, Value> propertyOverrides;
 
-	EntityQueries(Entity entity, float partialTick, Map<String, JsonElement> properties, Map<String, Value> propertyOverrides) {
+	/** Whether its behavior definition makes it a baby for good (the Mayor), whatever the Java entity is. */
+	private final boolean alwaysBaby;
+
+	EntityQueries(Entity entity, float partialTick, Map<String, JsonElement> properties, Map<String, Value> propertyOverrides,
+			boolean alwaysBaby) {
+		this.alwaysBaby = alwaysBaby;
 		this.entity = entity;
 		this.partialTick = partialTick;
 		this.properties = properties;
@@ -56,7 +61,7 @@ final class EntityQueries implements ObjectValue {
 	private Value value(String name) {
 		LivingEntity living = entity instanceof LivingEntity l ? l : null;
 		return switch (name) {
-			case "is_baby" -> Value.of(living != null && living.isBaby());
+			case "is_baby" -> Value.of(alwaysBaby || living != null && living.isBaby());
 			case "is_alive" -> Value.of(entity.isAlive());
 			case "is_on_ground" -> Value.of(entity.onGround());
 			case "is_in_water" -> Value.of(entity.isInWater());

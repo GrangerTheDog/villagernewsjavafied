@@ -57,6 +57,22 @@ public final class BedrockMaterials {
 		return new BedrockMaterials(Map.copyOf(defs));
 	}
 
+	/** Whether this material is (or builds on) Bedrock's {@code sheep}: its texture's alpha marks what the dye colours. */
+	public boolean isDyed(String material) {
+		String name = material == null ? "" : material.toLowerCase(Locale.ROOT);
+		for (int depth = 0; depth < 16; depth++) {
+			if (name.equals("sheep")) {
+				return true;
+			}
+			Def def = defs.get(name);
+			if (def == null || def.parent() == null) {
+				return false;
+			}
+			name = def.parent();
+		}
+		return false;
+	}
+
 	public Kind classify(String material) {
 		Set<String> states = new HashSet<>();
 		Set<String> defines = new HashSet<>();

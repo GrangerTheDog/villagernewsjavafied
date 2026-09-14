@@ -12,6 +12,7 @@ import com.geckolib.renderer.base.GeoRenderState;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 
 import java.util.function.Function;
 
@@ -23,6 +24,8 @@ public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 	public static final DataTicket<RenderPlan> PLAN = DataTicket.create("villagernewsjavafied_render_plan", RenderPlan.class);
 	/** On every render state this model filled, so it can be routed back to the add-on renderer. */
 	public static final DataTicket<Boolean> FILLED = DataTicket.create("villagernewsjavafied_filled", Boolean.class);
+	/** A dyeable entity's colour (a sheep's wool), for layers drawn with Bedrock's {@code sheep} material. */
+	public static final DataTicket<Integer> DYE_COLOR = DataTicket.create("villagernewsjavafied_dye_color", Integer.class);
 
 	/** Used until the add-on is converted; resolves to GeckoLib's placeholder without logging every frame. */
 	private static final Identifier NOT_CONVERTED = VillagerNewsJavafied.id("entity/not_converted");
@@ -41,6 +44,9 @@ public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 			RenderPlan plan = BedrockRuntime.evaluate(entity, AddonNames.character(clientEntity.apply(entity)), renderState.getPartialTick());
 			if (plan != null && !plan.layers().isEmpty()) {
 				renderState.addGeckolibData(PLAN, plan);
+			}
+			if (entity instanceof Sheep sheep) {
+				renderState.addGeckolibData(DYE_COLOR, sheep.getColor().getTextureDiffuseColor() | 0xFF000000);
 			}
 		}
 	}

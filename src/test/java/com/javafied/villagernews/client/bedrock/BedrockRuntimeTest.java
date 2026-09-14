@@ -45,7 +45,8 @@ class BedrockRuntimeTest {
 		defs = BedrockDefinitions.parse(read(bedrock.resolve("entity")), read(bedrock.resolve("render_controllers")),
 				read(bedrock.resolve("materials")), List.of(json(bedrock.resolve("properties.json"))),
 				read(bedrock.resolve("animations")), read(bedrock.resolve("animation_controllers")),
-				Files.isDirectory(bedrock.resolve("attachables")) ? read(bedrock.resolve("attachables")) : List.of());
+				Files.isDirectory(bedrock.resolve("attachables")) ? read(bedrock.resolve("attachables")) : List.of(),
+				Files.exists(bedrock.resolve("traits.json")) ? List.of(json(bedrock.resolve("traits.json"))) : List.of());
 	}
 
 	/** An adult, plains-biome farmer with skin 2 - what a freshly spawned vanilla villager could look like. */
@@ -216,6 +217,24 @@ class BedrockRuntimeTest {
 		assertTrue(plan.isBoneVisible(bone("mayor_hat")), "the Mayor Hat's bone");
 		assertFalse(plan.isBoneVisible(bone("moustache")), "not the moustache");
 		assertTexturesExist(plan);
+	}
+
+	/** Wooly's wool (Bedrock's sheep material) gets a layer of its own that the renderer tints with the sheep's colour. */
+	@Test
+	void woolyHasADyeableWoolLayer() {
+		RenderPlan plan = plan(AddonNames.character("wooly"), 0);
+		assertTrue(plan.layers().stream().anyMatch(layer -> layer.dyed() && layer.texture().getPath().endsWith("_dye.png")),
+				"dyed wool layer");
+		assertTexturesExist(plan);
+	}
+
+	/** The Mayor is a baby for good in the add-on, at half scale, which the renderer applies whatever the Java villager is. */
+	@Test
+	void theMayorIsAlwaysABaby() {
+		String mayor = defs.clientEntity(AddonNames.character("mayor")).identifier();
+		assertTrue(defs.alwaysBaby(mayor));
+		assertEquals(0.5f, defs.entityScale(mayor), 1e-6);
+		assertFalse(defs.alwaysBaby(defs.clientEntity("villager").identifier()));
 	}
 
 	/** The level badge follows the villager's trading level (which the add-on reads through its trade-tier probe). */
