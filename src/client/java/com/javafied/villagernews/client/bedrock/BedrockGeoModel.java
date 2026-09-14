@@ -20,6 +20,8 @@ import java.util.function.Function;
  */
 public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 	public static final DataTicket<RenderPlan> PLAN = DataTicket.create("villagernewsjavafied_render_plan", RenderPlan.class);
+	/** On every render state this model filled, so it can be routed back to the add-on renderer. */
+	public static final DataTicket<Boolean> FILLED = DataTicket.create("villagernewsjavafied_filled", Boolean.class);
 
 	/** Used until the add-on is converted; resolves to GeckoLib's placeholder without logging every frame. */
 	private static final Identifier NOT_CONVERTED = VillagerNewsJavafied.id("entity/not_converted");
@@ -33,6 +35,7 @@ public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 
 	@Override
 	public void addAdditionalStateData(BedrockAnimatable animatable, Object relatedObject, GeoRenderState renderState) {
+		renderState.addGeckolibData(FILLED, true);
 		if (relatedObject instanceof Entity entity) {
 			RenderPlan plan = BedrockRuntime.evaluate(entity, clientEntity.apply(entity), renderState.getPartialTick());
 			if (plan != null && !plan.layers().isEmpty()) {

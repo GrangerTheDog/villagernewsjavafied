@@ -21,7 +21,8 @@ import net.minecraft.world.entity.EntityTypes;
 
 public class VillagerNewsJavafiedClient implements ClientModInitializer {
 	/** The add-on's one sheep reskin. Hand-picked for now; mapping vanilla mobs to reskins from the manifest comes later. */
-	private static final String SHEEP_CLIENT_ENTITY = "mlkxjo";
+	/** The add-on's wandering trader character. */
+	private static final String WANDERING_TRADER_CLIENT_ENTITY = "txczvv";
 
 	private boolean promptedThisSession = false;
 
@@ -31,8 +32,10 @@ public class VillagerNewsJavafiedClient implements ClientModInitializer {
 		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(BedrockDefinitions.ID, new BedrockDefinitions());
 		DialogClient.init();
 
-		EntityRendererRegistry.register(EntityTypes.SHEEP, context -> new BedrockEntityRenderer<>(context,
-				new BedrockGeoModel(entity -> SHEEP_CLIENT_ENTITY), new BedrockAnimatable()));
+		// Wooly is drawn through VariantRenderers, so ordinary sheep keep vanilla's renderer.
+		// The add-on turns every wandering trader into its own character.
+		EntityRendererRegistry.register(EntityTypes.WANDERING_TRADER, context -> new BedrockEntityRenderer<>(context,
+				new BedrockGeoModel(entity -> WANDERING_TRADER_CLIENT_ENTITY), new BedrockAnimatable()));
 		EntityRendererRegistry.register(EntityTypes.VILLAGER, context -> new BedrockEntityRenderer<>(context,
 				new BedrockGeoModel(entity -> entity.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT)),
 				new BedrockAnimatable()));
