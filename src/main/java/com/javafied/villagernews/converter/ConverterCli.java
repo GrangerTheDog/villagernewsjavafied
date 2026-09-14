@@ -1,5 +1,7 @@
 package com.javafied.villagernews.converter;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
@@ -21,7 +23,7 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 8;
+	public static final int SCHEMA_VERSION = 9;
 
 	private ConverterCli() {
 	}
@@ -54,14 +56,17 @@ public final class ConverterCli {
 		System.out.println("Resource pack: " + addon.resourcePack);
 		System.out.println("Behavior pack: " + (addon.behaviorPack != null ? addon.behaviorPack : "(none)"));
 
+		AddonNames names = AddonNames.forVersion(addon.version);
+		System.out.println("Add-on version: " + addon.version + (names.known() ? "" : " - no names file for it; using " + names.version() + "'s"));
+
 		Map<String, String> geometryIndex = GeometryConverter.convert(addon.resourcePack, assetsDir);
 		int textureCount = TextureConverter.convert(addon.resourcePack, assetsDir);
 		int soundCount = SoundConverter.convert(addon.resourcePack, assetsDir);
-		int langKeyCount = LangConverter.convert(addon.resourcePack, assetsDir);
-		int itemCount = ItemConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
+		int langKeyCount = LangConverter.convert(addon.resourcePack, assetsDir, names);
+		int itemCount = ItemConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir, names);
 		int bedrockFileCount = BedrockDataConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
-		int dialogCount = ScriptDataConverter.convert(addon.behaviorPack, outputDir);
-		int guidePageCount = GuideConverter.convert(addon.behaviorPack, assetsDir);
+		int dialogCount = ScriptDataConverter.convert(addon.behaviorPack, outputDir, names);
+		int guidePageCount = GuideConverter.convert(addon.behaviorPack, assetsDir, names);
 
 		List<String> skipped = new ArrayList<>();
 		if (addon.behaviorPack != null) {
@@ -69,7 +74,7 @@ public final class ConverterCli {
 			collectSkipped(addon.behaviorPack.resolve("scripts"), addon.behaviorPack, skipped);
 		}
 
-		writeManifest(outputDir, geometryIndex, textureCount, soundCount, langKeyCount, skipped);
+		writeManifest(outputDir, addon.version, geometryIndex, textureCount, soundCount, langKeyCount, skipped);
 		writeSkipReport(outputDir, skipped);
 		writePackMcmeta(outputDir);
 
@@ -95,11 +100,14 @@ public final class ConverterCli {
 		}
 	}
 
-	private static void writeManifest(Path outputDir, Map<String, String> geometryIndex,
+	private static void writeManifest(Path outputDir, String addonVersion, Map<String, String> geometryIndex,
 			int textureCount, int soundCount, int langKeyCount,
 			List<String> skipped) throws IOException {
 		JsonObject manifest = new JsonObject();
 		manifest.addProperty("converterSchemaVersion", SCHEMA_VERSION);
+		if (addonVersion != null) {
+			manifest.addProperty("addonVersion", addonVersion);
+		}
 
 		JsonObject counts = new JsonObject();
 		counts.addProperty("geometries", geometryIndex.size());

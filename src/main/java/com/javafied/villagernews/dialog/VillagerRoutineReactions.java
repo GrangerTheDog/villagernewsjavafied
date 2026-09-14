@@ -34,35 +34,35 @@ import java.util.concurrent.ThreadLocalRandom;
  * being named with a name tag, and the evening gathering.
  */
 public final class VillagerRoutineReactions {
-	private static final String GOES_TO_BED = "ioxtmt";
-	private static final String SNORES = "asqzby";
-	private static final String WOKEN_AT_NIGHT = "viwaal";
-	private static final String WOKE_UP = "ctptjt";
+	private static final String GOES_TO_BED = "go_to_bed";
+	private static final String SNORES = "sleeping";
+	private static final String WOKEN_AT_NIGHT = "wake_a_sleeping_villager";
+	private static final String WOKE_UP = "wake_up_naturally";
 	private static final int SNORE_AFTER_TICKS = 40;
 	private static final int SNORE_MIN_TICKS = 200;
 	private static final int SNORE_MAX_TICKS = 240;
-	private static final String GOT_IN_BOAT = "ocerok";
-	private static final String TWO_IN_ONE_BOAT = "zqfvby";
-	private static final String BOAT_ON_WATER = "tjkgmv";
-	private static final String BOAT_ON_LAND = "ybwgyt";
-	private static final String MINECART_MOVING = "ifppja";
-	private static final String MINECART_STILL = "igyvcw";
-	private static final String HEARD_BELL = "kljgyu";
-	private static final String HEARD_BELL_BABY = "nxalcz";
+	private static final String GOT_IN_BOAT = "sit_in_a_boat";
+	private static final String TWO_IN_ONE_BOAT = "two_villagers_in_one_boat";
+	private static final String BOAT_ON_WATER = "boat_on_water";
+	private static final String BOAT_ON_LAND = "boat_on_land";
+	private static final String MINECART_MOVING = "ride_in_a_moving_minecart";
+	private static final String MINECART_STILL = "sit_in_a_minecart";
+	private static final String HEARD_BELL = "hear_a_bell_ring";
+	private static final String HEARD_BELL_BABY = "ring_a_bell_near_a_baby";
 	private static final int BELL_DELAY_TICKS = 15;
 	private static final double BELL_RANGE = 50;
-	private static final String NAMED = "spfsrr";
-	private static final String NAMED_BABY = "gzsztp";
+	private static final String NAMED = "name_a_villager";
+	private static final String NAMED_BABY = "name_a_baby_villager";
 	/** Special names: the add-on's easter eggs. (Its key for jeb_ was mangled by its minifier; restored.) */
 	private static final Map<String, String[]> NAMED_SPECIALLY = Map.of(
-			"Dinnerbone", new String[] {"qmpcxi", NAMED_BABY}, "Grumm", new String[] {"qmpcxi", NAMED_BABY},
-			"jeb_", new String[] {"armupg", NAMED_BABY}, "dragon", new String[] {NAMED, "cmrqhw"},
-			"Dragon", new String[] {NAMED, "cmrqhw"});
-	private static final String GATHERING = "ebfifz";
-	private static final String CANNOT_FIND_BELL = "trphsn";
-	private static final String GOSSIP = "wrjbdd";
+			"Dinnerbone", new String[] {"named_dinnerbone", NAMED_BABY}, "Grumm", new String[] {"named_dinnerbone", NAMED_BABY},
+			"jeb_", new String[] {"named_jeb", NAMED_BABY}, "dragon", new String[] {NAMED, "baby_named_dragon"},
+			"Dragon", new String[] {NAMED, "baby_named_dragon"});
+	private static final String GATHERING = "villager_gathering";
+	private static final String CANNOT_FIND_BELL = "cannot_find_the_bell";
+	private static final String GOSSIP = "villagers_gossip";
 	/** The gossip conversation's first part (its chain is in the library's conversations). */
-	private static final String GOSSIP_CHAIN = "wrjbddswxeva";
+	private static final String GOSSIP_CHAIN = "gossip_chain";
 
 	private static final Map<LivingEntity, Long> sleepingSince = new WeakHashMap<>();
 	private static final Map<LivingEntity, Long> nextSnore = new WeakHashMap<>();

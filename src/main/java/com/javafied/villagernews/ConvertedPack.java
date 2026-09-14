@@ -20,6 +20,20 @@ public final class ConvertedPack {
 		return FabricLoader.getInstance().getGameDir().resolve("resourcepacks").resolve(PACK_ID);
 	}
 
+	/** The converted add-on's version (from the manifest the converter writes); null if unknown. */
+	public static String addonVersion() {
+		Path manifest = dir().resolve("manifest.json");
+		try {
+			if (java.nio.file.Files.exists(manifest)) {
+				var json = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(manifest)).getAsJsonObject();
+				return json.has("addonVersion") ? json.get("addonVersion").getAsString() : null;
+			}
+		} catch (java.io.IOException | RuntimeException e) {
+			return null;
+		}
+		return null;
+	}
+
 	public static Path serverData(String file) {
 		return dir().resolve("server").resolve(file);
 	}

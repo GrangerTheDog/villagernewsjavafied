@@ -1,6 +1,8 @@
 package com.javafied.villagernews.dialog;
 
+import com.javafied.villagernews.behavior.BehaviorProperties;
 import com.javafied.villagernews.content.ModAttachments;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,10 +30,10 @@ public final class Speakers {
 	/** Kinds the "nearest villager reacts" search considers (the script excludes the trader and Wooly there). */
 	public static final Set<Kind> NEARBY_KINDS = Set.copyOf(EnumSet.complementOf(EnumSet.of(Kind.WOOLY, Kind.TRADER)));
 
-	/** The add-on's ids for the special characters, as used by the villager variant attachment. */
-	private static final Map<String, Kind> VARIANTS = Map.of("ilvfra", Kind.MAYOR, "poztxf", Kind.TESTIFICATE_MAN,
-			"vwpagn", Kind.NUMBER_5, "xcrjxf", Kind.NUMBER_9, "ghibss", Kind.UNTOUCHABLE, "txczvv", Kind.TRADER,
-			"mlkxjo", Kind.WOOLY);
+	/** The special characters, by the name the villager variant attachment gives them. */
+	private static final Map<String, Kind> VARIANTS = Map.of("mayor", Kind.MAYOR, "testificate_man", Kind.TESTIFICATE_MAN,
+			"villager_5", Kind.NUMBER_5, "villager_9", Kind.NUMBER_9, "untouchable", Kind.UNTOUCHABLE, "wandering_trader", Kind.TRADER,
+			"wooly", Kind.WOOLY);
 
 	private Speakers() {
 	}
@@ -45,15 +47,15 @@ public final class Speakers {
 		if (entity instanceof Villager) {
 			return variant == null ? Kind.VILLAGER : VARIANTS.getOrDefault(variant, Kind.VILLAGER);
 		}
-		if (entity instanceof Sheep && "mlkxjo".equals(variant)) {
+		if (entity instanceof Sheep && "wooly".equals(variant)) {
 			return Kind.WOOLY;
 		}
 		return null;
 	}
 
-	/** The add-on lets players shear a villager's nose off (property {@code p:gcfsvg}). */
+	/** The add-on lets players shear a villager's nose off (its {@code nose} property). */
 	public static boolean hasNose(Entity entity) {
-		return !"false".equals(entity.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.of()).get("p:gcfsvg"));
+		return !"false".equals(BehaviorProperties.read(entity, AddonNames.property("nose")));
 	}
 
 	public static boolean isBaby(Entity entity) {

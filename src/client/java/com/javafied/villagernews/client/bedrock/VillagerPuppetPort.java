@@ -1,6 +1,8 @@
 package com.javafied.villagernews.client.bedrock;
 
 import com.javafied.villagernews.behavior.PuppetHost;
+import com.javafied.villagernews.content.VillagerVariantKeys;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -23,8 +25,10 @@ import java.util.Map;
  * reproduced from the villager directly.
  */
 final class VillagerPuppetPort {
-	/** Path of the add-on client entity the script spawns as the puppet. */
-	static final String PUPPET = "villager";
+	/** Path of the add-on client entity the script spawns as the puppet (an ordinary villager's look). */
+	static String puppet() {
+		return AddonNames.character(VillagerVariantKeys.DEFAULT);
+	}
 	static final double ADULT_LIFT = 1.9;
 	static final double BABY_LIFT = 0.98;
 
@@ -33,8 +37,8 @@ final class VillagerPuppetPort {
 
 	/** {@code ntshmr}: the host state the script copies onto the puppet's properties. */
 	static Map<String, Value> hostDrivenProperties(Entity host) {
-		return Map.of(PuppetHost.PACKED_STATE, Value.of(PuppetHost.packedState(host)),
-				PuppetHost.VEHICLE, Value.of(PuppetHost.vehicleIndex(host)));
+		return Map.of(PuppetHost.packedStateProperty(), Value.of(PuppetHost.packedState(host)),
+				PuppetHost.vehicleProperty(), Value.of(PuppetHost.vehicleIndex(host)));
 	}
 
 	/**

@@ -1,5 +1,7 @@
 # Deobfuscating Villager News: is it worth it?
 
+> **Status (2026-09-14):** the recommended mapping layer is built. See [names.md](names.md) for how it works; dialogs are mostly named from the add-on's own guide titles, so an add-on update largely remaps itself.
+
 *Research note for Villager News: Javafied. It was written against add-on 1.0.4, the version in `dev/addon-src`. It contains identifiers only, never add-on content.*
 
 ## TL;DR

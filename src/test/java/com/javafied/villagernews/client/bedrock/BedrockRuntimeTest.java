@@ -3,6 +3,7 @@ package com.javafied.villagernews.client.bedrock;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Layer;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Pose;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.RenderPlan;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -112,7 +113,7 @@ class BedrockRuntimeTest {
 
 	@Test
 	void sheepShowsWoolUnlessSheared() {
-		RenderPlan plan = plan("mlkxjo", 0);
+		RenderPlan plan = plan(AddonNames.character("wooly"), 0);
 		assertTexturesExist(plan);
 		assertTrue(plan.isBoneVisible("oggd_head"), "wool bones visible on an unsheared sheep");
 		assertTrue(plan.isBoneVisible("body"));
@@ -120,7 +121,8 @@ class BedrockRuntimeTest {
 
 	@Test
 	void everyVillagerVariantProducesALayeredPlan() {
-		for (String variant : List.of("villager", "ghibss", "txczvv", "vwpagn", "poztxf", "xcrjxf", "ilvfra")) {
+		for (String character : List.of("villager", "untouchable", "wandering_trader", "villager_5", "testificate_man", "villager_9", "mayor")) {
+			String variant = AddonNames.character(character);
 			RenderPlan plan = plan(variant, 1);
 			assertFalse(plan.layers().isEmpty(), variant + " produced no layers");
 			assertTexturesExist(plan);
@@ -157,7 +159,7 @@ class BedrockRuntimeTest {
 		assertTrue(plan.poses().values().stream().anyMatch(p -> Math.abs(p.rx) + Math.abs(p.ry) > 1),
 				"expected the head/body to turn towards the target");
 		// v.dzpjns ("mid-gesture") gates the walk cycle; it must settle back to 0 when no line is playing.
-		assertEquals(0, state.variables().get("dzpjns").getAsNumber(), "villager stuck in the gesture state");
+		assertEquals(0, state.variables().get(variable("gesturing")).getAsNumber(), "villager stuck in the gesture state");
 
 		// The addon's "offset" animation drops the root to undo the script's puppet teleport;
 		// with the ported lift applied, the model should end up standing on the villager's own feet.
@@ -194,12 +196,12 @@ class BedrockRuntimeTest {
 		for (int frame = 1; frame <= 60; frame++) {
 			BedrockRuntime.plan(defs, ce, state, frame * 0.05, q, 0);
 			if (frame * 0.05 < 1.8) {
-				mouthMoved |= state.variables().get("invysa").getAsNumber() > 0;
+				mouthMoved |= state.variables().get(variable("mouth_open")).getAsNumber() > 0;
 			}
 		}
 		assertTrue(mouthMoved, "lip-sync timeline should open the mouth");
-		assertEquals(0, state.variables().get("invysa").getAsNumber(), "mouth closed after the line");
-		assertEquals("default", state.variables().get("skwjdr").getAsString(), "the line's gesture cue was picked up");
+		assertEquals(0, state.variables().get(variable("mouth_open")).getAsNumber(), "mouth closed after the line");
+		assertEquals("default", state.variables().get(variable("gesture")).getAsString(), "the line's gesture cue was picked up");
 	}
 
 	@Test
@@ -208,11 +210,11 @@ class BedrockRuntimeTest {
 		Identifier base = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1), 0)
 				.layers().getFirst().model();
 		RenderPlan plan = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0,
-				queries(ce.identifier(), 1, Map.of("p:mlxeez", new com.google.gson.JsonPrimitive("cryhjc"))), 0);
+				queries(ce.identifier(), 1, Map.of(AddonNames.property("accessory"), new com.google.gson.JsonPrimitive(AddonNames.item("mayor_hat")))), 0);
 		plan.layers().forEach(layer -> System.out.println("  with hat: " + layer));
 		assertTrue(plan.layers().stream().anyMatch(layer -> !layer.model().equals(base)), "an accessory layer with its own geometry");
-		assertTrue(plan.isBoneVisible("lghhat"), "the Mayor Hat's bone");
-		assertFalse(plan.isBoneVisible("egmkl2496"), "not the moustache");
+		assertTrue(plan.isBoneVisible(bone("mayor_hat")), "the Mayor Hat's bone");
+		assertFalse(plan.isBoneVisible(bone("moustache")), "not the moustache");
 		assertTexturesExist(plan);
 	}
 
@@ -221,7 +223,8 @@ class BedrockRuntimeTest {
 		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
 		int base = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1), 0).layers().size();
 		RenderPlan plan = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1,
-				Map.of("p:sign", new com.google.gson.JsonPrimitive(3), "p:wjnyei", new com.google.gson.JsonPrimitive(10))), 0);
+				Map.of(AddonNames.property("sign"), new com.google.gson.JsonPrimitive(3), AddonNames.property("sign_message"),
+						new com.google.gson.JsonPrimitive(10))), 0);
 		plan.layers().forEach(layer -> System.out.println("  with sign: " + layer));
 		assertTrue(plan.layers().size() > base, "sign layers");
 		assertTrue(plan.layers().stream().anyMatch(layer -> SignTextures.isGenerated(layer.texture())
@@ -233,8 +236,8 @@ class BedrockRuntimeTest {
 
 	@Test
 	void heldItemsTakeTheirFirstAndThirdPersonPoses() {
-		for (String item : List.of("dsojot", "kfjmlk")) {
-			BedrockDefinitions.ClientEntity attachable = defs.attachable(item);
+		for (String item : List.of("microphone", "handbook")) {
+			BedrockDefinitions.ClientEntity attachable = defs.attachable(AddonNames.item(item));
 			assumeTrue(attachable != null, "no attachables converted");
 			Pose third = attachablePose(attachable, false);
 			Pose first = attachablePose(attachable, true);
@@ -264,6 +267,14 @@ class BedrockRuntimeTest {
 		context.set("is_first_person", Value.of(firstPerson));
 		context.set("item_slot", StringValue.of("main_hand"));
 		return context;
+	}
+
+	private static String variable(String name) {
+		return AddonNames.current().id(AddonNames.Kind.VARIABLE, name);
+	}
+
+	private static String bone(String name) {
+		return AddonNames.current().id(AddonNames.Kind.BONE, name);
 	}
 
 	private static void assertTexturesExist(RenderPlan plan) {

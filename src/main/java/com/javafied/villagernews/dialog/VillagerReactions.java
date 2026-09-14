@@ -31,37 +31,37 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Hand port of the add-on script's villager triggers - the reasons a villager
- * speaks up. Dialog ids are the add-on's own (see {@link DialogLibrary}).
+ * speaks up. Dialogs go by their readable names (see {@link DialogLibrary}).
  */
 public final class VillagerReactions {
 	// Idle chatter, by context (the script's txggyx).
-	private static final String OTHER_DIMENSION = "ycynep";
-	private static final String IN_THE_END = "wwcbib";
-	private static final String IN_THE_NETHER = "zpjrtq";
-	private static final String UP_HIGH = "qarzxp";
-	private static final String UNDERGROUND = "mgiaiw";
-	private static final String COLD_BIOME = "tftmbe";
-	private static final String HOT_BIOME = "felign";
-	private static final String NITWIT = "uookqp";
-	private static final String UNEMPLOYED = "gbxzxv";
-	private static final String EMPLOYED = "lvigit";
-	private static final String SEES_EXPERIENCE_ORBS = "cvltyw";
+	private static final String OTHER_DIMENSION = "wander_in_another_dimension";
+	private static final String IN_THE_END = "wander_in_the_end";
+	private static final String IN_THE_NETHER = "wander_in_the_nether";
+	private static final String UP_HIGH = "wander_high_above_the_ground";
+	private static final String UNDERGROUND = "wander_deep_underground";
+	private static final String COLD_BIOME = "wander_somewhere_cold";
+	private static final String HOT_BIOME = "wander_somewhere_hot";
+	private static final String NITWIT = "nitwit_wandering";
+	private static final String UNEMPLOYED = "unemployed_villager_wandering";
+	private static final String EMPLOYED = "villager_wandering";
+	private static final String SEES_EXPERIENCE_ORBS = "see_xp_orbs";
 	// Real-world calendar chatter (the script's siigqd).
-	private static final Map<DayOfWeek, String> WEEKDAY = Map.of(DayOfWeek.SUNDAY, "uzvatl", DayOfWeek.MONDAY, "gkvlqc",
-			DayOfWeek.TUESDAY, "dkpihl", DayOfWeek.WEDNESDAY, "gwakiz", DayOfWeek.THURSDAY, "zglkgp",
-			DayOfWeek.FRIDAY, "ypyumu", DayOfWeek.SATURDAY, "ildosa");
-	private static final String WEEKEND = "bkyidl";
-	private static final String OCTOBER = "mltyge";
-	private static final String DECEMBER = "tkkegl";
-	private static final String APRIL_FOOLS = "obitls";
-	private static final String NEW_YEARS_EVE = "xljknt";
+	private static final Map<DayOfWeek, String> WEEKDAY = Map.of(DayOfWeek.SUNDAY, "wander_on_a_sunday", DayOfWeek.MONDAY, "wander_on_a_monday",
+			DayOfWeek.TUESDAY, "wander_on_a_tuesday", DayOfWeek.WEDNESDAY, "wander_on_a_wednesday", DayOfWeek.THURSDAY, "wander_on_a_thursday",
+			DayOfWeek.FRIDAY, "wander_on_a_friday", DayOfWeek.SATURDAY, "wander_on_a_saturday");
+	private static final String WEEKEND = "wander_on_the_weekend";
+	private static final String OCTOBER = "wander_in_october";
+	private static final String DECEMBER = "wander_in_december";
+	private static final String APRIL_FOOLS = "wander_on_april_fools_day";
+	private static final String NEW_YEARS_EVE = "wander_on_new_years_eve";
 	/** Conversations both villagers can have with their noses on (the others are about losing one). */
-	private static final String GROUP_NOSES = "gmrypk";
+	private static final String GROUP_NOSES = "both_noses";
 	// Dialog tags the hurt reaction respects.
-	private static final String TAG_NO_HURT_VOICE = "ouqfaa";
-	private static final String TAG_KEEPS_TALKING = "auevko";
-	private static final String GETS_HURT = "wyvzhk";
-	private static final String BABY_GETS_HURT = "ecslqo";
+	private static final String TAG_NO_HURT_VOICE = "no_hurt_voice";
+	private static final String TAG_KEEPS_TALKING = "keeps_talking";
+	private static final String GETS_HURT = "villager_gets_hurt";
+	private static final String BABY_GETS_HURT = "baby_villager_gets_hurt";
 
 	private static final Set<String> COLD_BIOMES = Set.of("snowy_beach", "snowy_taiga", "deep_cold_ocean",
 			"deep_frozen_ocean", "frozen_ocean", "frozen_peaks", "frozen_river", "snowy_plains", "ice_spikes",
@@ -75,23 +75,23 @@ public final class VillagerReactions {
 	private static final int TRADER_MIN_TICKS = 23 * 20;
 	private static final int TRADER_MAX_TICKS = 41 * 20;
 	/** The special characters' idle lines (#9 half the time talks about holding his microphone instead). */
-	private static final Map<Speakers.Kind, String> CHARACTER_IDLE = Map.of(Speakers.Kind.MAYOR, "xxehbq",
-			Speakers.Kind.TESTIFICATE_MAN, "luoibc", Speakers.Kind.NUMBER_5, "legnsy", Speakers.Kind.NUMBER_9, "ezgbfw",
-			Speakers.Kind.WOOLY, "vmohcm");
-	private static final String NUMBER_9_MICROPHONE = "adhvqz";
-	private static final String TRADER_SEES_CUSTOMER = "hxlyuc";
-	private static final String TRADER_INVISIBLE = "dbzjqi";
-	private static final String TRADER_IDLE = "stqafd";
-	private static final String NO_NOSE = "dcvgnm";
+	private static final Map<Speakers.Kind, String> CHARACTER_IDLE = Map.of(Speakers.Kind.MAYOR, "mayor_idle",
+			Speakers.Kind.TESTIFICATE_MAN, "testificate_man_idle", Speakers.Kind.NUMBER_5, "villager_5_idle", Speakers.Kind.NUMBER_9, "villager_9_idle",
+			Speakers.Kind.WOOLY, "wooly_idle");
+	private static final String NUMBER_9_MICROPHONE = "holding_the_microphone";
+	private static final String TRADER_SEES_CUSTOMER = "wandering_trader_sees_customer";
+	private static final String TRADER_INVISIBLE = "invisible_wandering_trader";
+	private static final String TRADER_IDLE = "wandering_trader_idle";
+	private static final String NO_NOSE = "no_nose_villager_wandering";
 	/** Conversation groups by noses: both villagers have theirs / neither / one of them. */
-	private static final String GROUP_NO_NOSES = "loicsw";
-	private static final String GROUP_ONE_NOSE = "bygaxw";
+	private static final String GROUP_NO_NOSES = "no_noses";
+	private static final String GROUP_ONE_NOSE = "one_nose";
 	/**
 	 * "Ah, what happened to your nose?" - the script's table lists that line as
 	 * its own answer, leaving the nose-less villager's reply unused; restored.
 	 */
-	private static final Map<String, List<String>> RESTORED_CONVERSATIONS = Map.of("bygaxwhiqnpi",
-			List.of("bygaxwhiqnpi", "bygaxwmwtiaf"));
+	private static final Map<String, List<String>> RESTORED_CONVERSATIONS = Map.of("one_nose_chat_3",
+			List.of("one_nose_chat_3", "one_nose_chat_3_part_2"));
 	private static final double CONVERSATION_DISTANCE = 2.5;
 	private static final int CONVERSATION_REST_TICKS = 1400;
 
@@ -336,7 +336,8 @@ public final class VillagerReactions {
 		boolean theirs = Speakers.hasNose(partner);
 		String group = mine && theirs ? GROUP_NOSES : !mine && !theirs ? GROUP_NO_NOSES : GROUP_ONE_NOSE;
 		List<List<String>> starters = engine.library().conversations().stream()
-				.filter(parts -> parts.getFirst().startsWith(group)).toList();
+				.filter(parts -> engine.library().get(parts.getFirst()) != null
+						&& group.equals(engine.library().get(parts.getFirst()).group())).toList();
 		if (starters.isEmpty()) {
 			return;
 		}

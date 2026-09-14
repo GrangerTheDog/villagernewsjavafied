@@ -23,27 +23,28 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * The add-on's items, under their add-on ids so the converted icons, models
- * and names (which the player's own add-on supplies) line up with them, plus
- * spawn eggs for its characters - all in a "Villager News" creative tab.
+ * The add-on's items, under readable ids ({@code handbook}, {@code mayor_hat};
+ * the converter writes the player's add-on's icons, models and names under
+ * the same ones), plus spawn eggs for its characters - all in a "Villager
+ * News" creative tab.
  */
 public final class ModItems {
 	private static final List<Item> TAB_CONTENTS = new ArrayList<>();
 
 	/** Villager News Handbook: the add-on's guide, read from the player's converted add-on. */
-	public static final Item HANDBOOK = register("kfjmlk", p -> AttachableItem.create(p, true), new Item.Properties().stacksTo(1));
-	public static final Item MAYOR_HAT = wearable("cryhjc");
-	public static final Item TESTIFICATE_MAN_HELMET = wearable("ufernq");
-	public static final Item MOUSTACHE = wearable("odplew");
-	public static final Item MICROPHONE = register("dsojot", p -> AttachableItem.create(p, false), new Item.Properties().stacksTo(1));
-	public static final Item VILLAGER_NOSE = wearable("qzhdgf");
+	public static final Item HANDBOOK = register("handbook", p -> AttachableItem.create(p, true), new Item.Properties().stacksTo(1));
+	public static final Item MAYOR_HAT = wearable("mayor_hat");
+	public static final Item TESTIFICATE_MAN_HELMET = wearable("testificate_man_helmet");
+	public static final Item MOUSTACHE = wearable("moustache");
+	public static final Item MICROPHONE = register("microphone", p -> AttachableItem.create(p, false), new Item.Properties().stacksTo(1));
+	public static final Item VILLAGER_NOSE = wearable("villager_nose");
 
-	public static final Item MAYOR_SPAWN_EGG = spawnEgg("ilvfra", EntityTypes.VILLAGER);
-	public static final Item TESTIFICATE_MAN_SPAWN_EGG = spawnEgg("poztxf", EntityTypes.VILLAGER);
-	public static final Item VILLAGER_5_SPAWN_EGG = spawnEgg("vwpagn", EntityTypes.VILLAGER);
-	public static final Item VILLAGER_9_SPAWN_EGG = spawnEgg("xcrjxf", EntityTypes.VILLAGER);
-	public static final Item UNTOUCHABLE_SPAWN_EGG = spawnEgg("ghibss", EntityTypes.VILLAGER);
-	public static final Item WOOLY_SPAWN_EGG = spawnEgg("mlkxjo", EntityTypes.SHEEP);
+	public static final Item MAYOR_SPAWN_EGG = spawnEgg("mayor", EntityTypes.VILLAGER);
+	public static final Item TESTIFICATE_MAN_SPAWN_EGG = spawnEgg("testificate_man", EntityTypes.VILLAGER);
+	public static final Item VILLAGER_5_SPAWN_EGG = spawnEgg("villager_5", EntityTypes.VILLAGER);
+	public static final Item VILLAGER_9_SPAWN_EGG = spawnEgg("villager_9", EntityTypes.VILLAGER);
+	public static final Item UNTOUCHABLE_SPAWN_EGG = spawnEgg("untouchable", EntityTypes.VILLAGER);
+	public static final Item WOOLY_SPAWN_EGG = spawnEgg("wooly", EntityTypes.SHEEP);
 
 	public static final CreativeModeTab TAB = Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB,
 			VillagerNewsJavafied.id("villager_news"),

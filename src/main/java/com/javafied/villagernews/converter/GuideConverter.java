@@ -1,5 +1,7 @@
 package com.javafied.villagernews.converter;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -38,9 +40,10 @@ import java.util.regex.Pattern;
  *                                          "label", "description", "items": [ ".." ] } ] } } }
  * }</pre>
  *
- * <p>The script is minified with obfuscated property names; the argument
- * names below are add-on 1.0's. The page builders themselves are told apart by
- * what they do, and the tables they read are found through their code.
+ * <p>The script is minified with obfuscated property names; the builders'
+ * argument names come from the add-on version's names file. The page builders
+ * themselves are told apart by what they do, and the tables they read are
+ * found through their code.
  */
 public final class GuideConverter {
 	/** The handbook: {@code title = map(page, e => titles[e] ?? default); return <ui>.<form>({closeButton: ...}}. */
@@ -55,32 +58,42 @@ public final class GuideConverter {
 	private static final Pattern TITLES_FROM_TABLE = Pattern.compile(
 			"^Object\\.fromEntries\\(Object\\.entries\\(([\\w$]+)\\)\\.map\\(\\(\\[([\\w$]+),([\\w$]+)\\]\\)=>\\[\\2,\\3\\.(\\w+)\\]\\)\\)");
 
-	// Add-on 1.0's names for the page builders' arguments.
-	private static final String START = "lrxfyp";
-	private static final String TEXT = "ulqert";
-	private static final String DESCRIPTION = "kvksvp";
-	private static final String KEY = "hinisi";
-	private static final String SEARCH = "hxfxiz";
+	// The page builders' (obfuscated) argument names, from the add-on version's names file.
+	private final String startKey;
+	private final String textKey;
+	private final String descriptionKey;
+	private final String pageKey;
+	private final String searchKey;
 	/** The settings page's controls, in the order the add-on lays them out. */
 	private static final List<String> SETTINGS = List.of("subtitles", "chattiness", "rare_lines", "special_villagers", "style");
 
 	private final String script;
 	private final JsLiteral js;
 
-	private GuideConverter(String script) {
+	private GuideConverter(String script, AddonNames names) {
 		this.script = script;
 		this.js = new JsLiteral(script);
+		this.startKey = key(names, "guide_start");
+		this.textKey = key(names, "guide_text");
+		this.descriptionKey = key(names, "guide_description");
+		this.pageKey = key(names, "guide_key");
+		this.searchKey = key(names, "guide_search");
+	}
+
+	private static String key(AddonNames names, String name) {
+		String key = names.id(AddonNames.Kind.SCRIPT_KEY, name);
+		return key != null ? key : name;
 	}
 
 	/** @return how many pages the handbook has (0 if the script has none the converter recognises) */
-	public static int convert(Path behaviorPack, Path assetsDir) throws IOException {
+	public static int convert(Path behaviorPack, Path assetsDir, AddonNames names) throws IOException {
 		Path scripts = behaviorPack == null ? null : behaviorPack.resolve("scripts");
 		if (scripts == null || !Files.isDirectory(scripts)) {
 			return 0;
 		}
 		try (var stream = Files.walk(scripts)) {
 			for (Path file : stream.filter(p -> p.toString().endsWith(".js")).toList()) {
-				JsonObject guide = extract(Files.readString(file));
+				JsonObject guide = extract(Files.readString(file), names);
 				if (guide != null) {
 					ConverterUtil.writeJson(assetsDir.resolve("guide.json"), guide);
 					return guide.getAsJsonObject("pages").size();
@@ -91,16 +104,16 @@ public final class GuideConverter {
 	}
 
 	/** Null if the script has no handbook. */
-	static JsonObject extract(String script) {
+	static JsonObject extract(String script, AddonNames names) {
 		Matcher form = FORM.matcher(script);
-		return form.find() ? new GuideConverter(script).guide(form) : null;
+		return form.find() ? new GuideConverter(script, names).guide(form) : null;
 	}
 
 	private JsonObject guide(Matcher form) {
 		JsonObject formArgs = js.parseLenientAt(form.end()).getAsJsonObject();
 		JsonObject out = new JsonObject();
 		out.addProperty("title", string(js.constant(form.group(2)), ""));
-		out.addProperty("start", string(formArgs.get(START), "home"));
+		out.addProperty("start", string(formArgs.get(startKey), "home"));
 		out.add("titles", titles(form.group(1)));
 
 		JsonObject ui = new JsonObject();
@@ -167,23 +180,23 @@ public final class GuideConverter {
 			page.addProperty("back", true);
 		} else if (builder.contains(".entries)")) {
 			page.addProperty("type", "entries");
-			page.addProperty("text", string(args.get(DESCRIPTION), ""));
+			page.addProperty("text", string(args.get(descriptionKey), ""));
 			page.add("entries", entries(builder, args.get("entries")));
 			page.addProperty("back", !args.has("backButton") || isTrue(args.get("backButton")));
-		} else if (args.has(SEARCH)) {
+		} else if (args.has(searchKey)) {
 			page.addProperty("type", "search");
-			page.addProperty("text", string(args.get(TEXT), ""));
+			page.addProperty("text", string(args.get(textKey), ""));
 			page.add("buttons", buttons(args.get("buttons")));
-			page.add("search", searchIndex(args.get(SEARCH)));
+			page.add("search", searchIndex(args.get(searchKey)));
 			page.addProperty("back", true);
 		} else if (args.has("buttons") || builder.contains(".buttons")) {
 			page.addProperty("type", "menu");
-			page.addProperty("text", string(args.get(TEXT), ""));
+			page.addProperty("text", string(args.get(textKey), ""));
 			page.add("buttons", buttons(args.get("buttons")));
 			page.addProperty("back", isTrue(args.get("backButton")));
-		} else if (args.has(KEY)) {
+		} else if (args.has(pageKey)) {
 			page.addProperty("type", "trigger");
-			page.addProperty("text", triggerText(builder, string(args.get(KEY), "")));
+			page.addProperty("text", triggerText(builder, string(args.get(pageKey), "")));
 			page.addProperty("back", true);
 		} else {
 			return null;
@@ -227,8 +240,8 @@ public final class GuideConverter {
 		for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
 			if (entry.getKey().startsWith("$spread")) {
 				generatedButtons(entry.getValue().getAsJsonObject(), out);
-			} else if (entry.getValue().isJsonObject() && entry.getValue().getAsJsonObject().has(KEY)) {
-				out.add(button(entry.getKey(), string(entry.getValue().getAsJsonObject().get(KEY), "")));
+			} else if (entry.getValue().isJsonObject() && entry.getValue().getAsJsonObject().has(pageKey)) {
+				out.add(button(entry.getKey(), string(entry.getValue().getAsJsonObject().get(pageKey), "")));
 			}
 		}
 		return out;
@@ -329,7 +342,7 @@ public final class GuideConverter {
 
 	/** A trigger's page shows its body: {@code Label({text: body(args.<key>)})}. */
 	private String triggerText(String builder, String key) {
-		Matcher m = Pattern.compile("text:([\\w$]+)\\([\\w$]+\\." + Pattern.quote(KEY) + "\\)").matcher(builder);
+		Matcher m = Pattern.compile("text:([\\w$]+)\\([\\w$]+\\." + Pattern.quote(pageKey) + "\\)").matcher(builder);
 		if (!m.find()) {
 			return "";
 		}
@@ -380,8 +393,8 @@ public final class GuideConverter {
 				ui.addProperty("back", text.group(1));
 			}
 		}
-		Matcher search = Pattern.compile("([\\w$]+)\\(\\{" + Pattern.quote(SEARCH) + ":").matcher(builder);
-		if (!ui.has("search_label") && args.has(SEARCH) && search.find()) {
+		Matcher search = Pattern.compile("([\\w$]+)\\(\\{" + Pattern.quote(searchKey) + ":").matcher(builder);
+		if (!ui.has("search_label") && args.has(searchKey) && search.find()) {
 			String definition = definition(search.group(1));
 			if (definition == null) {
 				return;

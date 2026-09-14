@@ -46,56 +46,58 @@ import java.util.concurrent.ThreadLocalRandom;
  * blocks, buttons, doors, levers, fireworks and lightning.
  */
 public final class WorldReactions {
-	private static final String IN_SHALLOW_WATER = "rweawq";
-	private static final String ON_MAGMA = "wancdi";
-	private static final String ON_ICE = "zpcnhu";
-	private static final String ON_SNOW = "ehjhvi";
-	private static final String NEAR_FIRE = "ydigbg";
-	private static final String SEES_CAMPFIRE = "oqjzko";
+	private static final String IN_SHALLOW_WATER = "stand_in_shallow_water";
+	private static final String ON_MAGMA = "stand_on_magma";
+	private static final String ON_ICE = "stand_on_ice";
+	private static final String ON_SNOW = "stand_on_snow";
+	private static final String NEAR_FIRE = "stand_near_fire";
+	private static final String SEES_CAMPFIRE = "see_a_campfire";
 	/** First part of the campfire conversation; its 2nd and 4th parts are said by the one who spoke just before. */
-	private static final String CAMPFIRE_CONVERSATION = "wrswgiswxeva";
+	private static final String CAMPFIRE_CONVERSATION = "two_villagers_at_a_campfire";
 	private static final int CAMPFIRE_CONVERSATION_REST = 14000;
-	private static final String SEES_TNT = "pmaqgq";
-	private static final String PLAYER_ON_BED = "qxgbwi";
-	private static final String PANICS = "uzdxum";
+	private static final String SEES_TNT = "see_tnt";
+	private static final String PLAYER_ON_BED = "stand_on_a_villagers_bed";
+	private static final String PANICS = "villager_panics";
 	private static final int PANIC_REST_TICKS = 200;
-	private static final String SHARES_FOOD = "locuih";
-	private static final Map<String, String> RECEIVED_FOOD = Map.of("beetroot", "rlfjux", "bread", "bbjsik", "carrot", "nqktml",
-			"potato", "ytydjc");
-	private static final String RECEIVED_FOOD_ANY = "ebyrtk";
-	private static final String PICKED_UP_VILLAGERS_ITEM = "ujyxfg";
-	private static final Map<String, String> BABY_RECEIVED_FOOD = Map.of("beetroot", "qrdzmt", "bread", "hbalps", "carrot", "hcdvqm",
-			"potato", "gotjxf");
-	private static final String BABY_RECEIVED_ANY = "saxuwk";
-	private static final String PICKED_UP_ITEM = "dxmmiu";
-	private static final String PICKED_UP_PLAYERS_ITEM = "vkhrme";
+	private static final String SHARES_FOOD = "share_food_with_another_villager";
+	private static final Map<String, String> RECEIVED_FOOD = Map.of("beetroot", "receive_beetroot", "bread", "receive_bread",
+			"carrot", "receive_carrot",
+			"potato", "receive_potatoes");
+	private static final String RECEIVED_FOOD_ANY = "receive_food";
+	private static final String PICKED_UP_VILLAGERS_ITEM = "pick_up_an_item_dropped_by_a_villager";
+	private static final Map<String, String> BABY_RECEIVED_FOOD = Map.of("beetroot", "give_a_baby_beetroot", "bread",
+			"give_a_baby_bread", "carrot", "give_a_baby_carrots",
+			"potato", "give_a_baby_potatoes");
+	private static final String BABY_RECEIVED_ANY = "receive_food_from_another_villager";
+	private static final String PICKED_UP_ITEM = "pick_up_an_item";
+	private static final String PICKED_UP_PLAYERS_ITEM = "pick_up_an_item_dropped_by_a_player";
 	private static final Set<String> SHARED_FOOD = Set.of("bread", "carrot", "potato", "beetroot", "wheat_seeds",
 			"beetroot_seeds", "torchflower_seeds", "pitcher_pod", "bone_meal");
-	private static final String HOME_WITHOUT_BED = "uqguqj";
-	private static final String HOME = "wkfbuv";
-	private static final String HOME_OTHER_DIMENSION = "uhbigm";
-	private static final String HOME_IN_END = "iubjul";
-	private static final String HOME_IN_NETHER = "bvtmmz";
+	private static final String HOME_WITHOUT_BED = "return_home_without_a_bed";
+	private static final String HOME = "return_home";
+	private static final String HOME_OTHER_DIMENSION = "return_home_in_another_dimension";
+	private static final String HOME_IN_END = "try_to_return_home_in_the_end";
+	private static final String HOME_IN_NETHER = "try_to_return_home_in_the_nether";
 	private static final int NO_BED_TICKS = 12000;
-	private static final String GOT_A_JOB = "zndzjx";
-	private static final String FALLING_BLOCK = "bodvsv";
-	private static final String BUTTON = "ktzfvk";
-	private static final String DOOR_IN_FACE = "pfelrr";
-	private static final String LEVER = "yiwncn";
-	private static final String SET_OFF_FIREWORK = "dfdkli";
-	private static final String SAW_FIREWORK = "zeykfp";
-	private static final String SAW_LIGHTNING = "ikrwzy";
-	private static final String CAUGHT_IN_RAIN = "scbmka";
-	private static final String TRADER_CAUGHT_IN_RAIN = "kxoqky";
-	private static final String SHEEP = "vxycol";
-	private static final String PICKS_UP_ARMOR = "zjwpzi";
-	private static final String PICKS_UP_ENCHANTED_ARMOR = "habfnx";
+	private static final String GOT_A_JOB = "get_a_job";
+	private static final String FALLING_BLOCK = "see_a_falling_block";
+	private static final String BUTTON = "press_a_button";
+	private static final String DOOR_IN_FACE = "close_a_door_in_a_villagers_face";
+	private static final String LEVER = "flip_a_lever";
+	private static final String SET_OFF_FIREWORK = "set_off_a_firework";
+	private static final String SAW_FIREWORK = "see_a_firework";
+	private static final String SAW_LIGHTNING = "see_lightning";
+	private static final String CAUGHT_IN_RAIN = "caught_in_the_rain";
+	private static final String TRADER_CAUGHT_IN_RAIN = "wandering_trader_caught_in_the_rain";
+	private static final String SHEEP = "sheep";
+	private static final String PICKS_UP_ARMOR = "pick_up_armor";
+	private static final String PICKS_UP_ENCHANTED_ARMOR = "pick_up_enchanted_armor";
 	private static final int ARMOR_NOTICE_TICKS = 30 * 20;
 	private static final double ARMOR_REACH = 1.5;
-	private static final String WOOLY_JOINS_IN = "fskcce";
-	private static final String TRADER_DRINKS_POTION = "vggdrt";
-	private static final String TRADER_DRINKS_POTION_ONE_LLAMA = "jkeahu";
-	private static final String TRADER_DRINKS_POTION_TWO_LLAMAS = "myajyt";
+	private static final String WOOLY_JOINS_IN = "interact_with_wooly";
+	private static final String TRADER_DRINKS_POTION = "uses_an_invisibility_potion";
+	private static final String TRADER_DRINKS_POTION_ONE_LLAMA = "uses_a_potion_with_one_llama";
+	private static final String TRADER_DRINKS_POTION_TWO_LLAMAS = "uses_a_potion_with_two_llamas";
 
 	/** Search boxes around a villager for fire, campfires and TNT, rotating through three sizes (radius, height). */
 	private static final int[][] SEARCH = {{3, 4}, {5, 3}, {7, 2}};

@@ -36,29 +36,29 @@ import java.util.Set;
  * gates, and opening chests - especially one in a villager's house.
  */
 public final class BlockUseReactions {
-	private static final String USED_CAULDRON = "gtqcjn";
-	private static final String USED_COMPOSTER = "mfsmim";
-	private static final String COOKED_ON_CAMPFIRE = "nrzcxn";
-	private static final String LIT_CAMPFIRE = "tavxec";
-	private static final String PUT_OUT_CAMPFIRE = "uvgkny";
-	private static final String LIT_CANDLE = "lfwbvu";
-	private static final String PUT_OUT_CANDLE = "repalq";
-	private static final String USED_SHELVES = "hojlbk";
-	private static final String CARVED_PUMPKIN = "xemdbt";
-	private static final String PLAYED_RECORD = "dyvwqv";
-	private static final String OPENED_GATE = "wykqdb";
-	private static final String CLOSED_GATE = "pvwkxp";
-	private static final String USED_DOOR = "jexbze";
-	private static final String OPENED_CHEST = "vgysma";
-	private static final String OPENED_CHEST_IN_HOUSE = "qfhrlh";
-	private static final String USED_SHULKER_BOX = "lifrrj";
-	private static final Map<String, String> USED_BLOCK = Map.ofEntries(Map.entry("brewing_stand", "myylcq"),
-			Map.entry("beacon", "xzpfwa"), Map.entry("campfire", "xbttae"), Map.entry("soul_campfire", "xbttae"),
-			Map.entry("crafter", "mjmgwj"), Map.entry("crafting_table", "pgwqkg"), Map.entry("ender_chest", "ykycil"),
-			Map.entry("dispenser", "lnlwnl"), Map.entry("dropper", "thmfsh"), Map.entry("grindstone", "tgggsl"),
-			Map.entry("enchanting_table", "crvciv"), Map.entry("anvil", "xwcoip"), Map.entry("smithing_table", "ididel"),
-			Map.entry("furnace", "gzhbtb"), Map.entry("cartography_table", "rykqwl"), Map.entry("loom", "bpgyfa"),
-			Map.entry("stonecutter", "knjvae"), Map.entry("chiseled_bookshelf", "iqvgzk"));
+	private static final String USED_CAULDRON = "use_a_cauldron";
+	private static final String USED_COMPOSTER = "use_a_composter";
+	private static final String COOKED_ON_CAMPFIRE = "cook_food_on_a_campfire";
+	private static final String LIT_CAMPFIRE = "light_a_campfire";
+	private static final String PUT_OUT_CAMPFIRE = "extinguish_a_campfire";
+	private static final String LIT_CANDLE = "light_a_candle";
+	private static final String PUT_OUT_CANDLE = "extinguish_a_candle";
+	private static final String USED_SHELVES = "use_shelves";
+	private static final String CARVED_PUMPKIN = "carve_a_pumpkin";
+	private static final String PLAYED_RECORD = "use_a_jukebox";
+	private static final String OPENED_GATE = "open_a_fence_gate";
+	private static final String CLOSED_GATE = "close_a_fence_gate";
+	private static final String USED_DOOR = "use_a_door";
+	private static final String OPENED_CHEST = "open_a_chest";
+	private static final String OPENED_CHEST_IN_HOUSE = "open_a_chest_in_a_villagers_house";
+	private static final String USED_SHULKER_BOX = "use_a_shulker_box";
+	private static final Map<String, String> USED_BLOCK = Map.ofEntries(Map.entry("brewing_stand", "use_a_brewing_stand"),
+			Map.entry("beacon", "use_a_beacon"), Map.entry("campfire", "use_a_campfire"), Map.entry("soul_campfire", "use_a_campfire"),
+			Map.entry("crafter", "use_a_crafter"), Map.entry("crafting_table", "use_a_crafting_table"), Map.entry("ender_chest", "use_an_ender_chest"),
+			Map.entry("dispenser", "use_a_dispenser"), Map.entry("dropper", "use_a_dropper"), Map.entry("grindstone", "use_a_grindstone"),
+			Map.entry("enchanting_table", "use_an_enchanting_table"), Map.entry("anvil", "use_an_anvil"), Map.entry("smithing_table", "use_a_smithing_table"),
+			Map.entry("furnace", "use_a_furnace"), Map.entry("cartography_table", "use_a_cartography_table"), Map.entry("loom", "use_a_loom"),
+			Map.entry("stonecutter", "use_a_stonecutter"), Map.entry("chiseled_bookshelf", "use_a_chiseled_bookshelf"));
 	private static final Set<String> COOKABLE = Set.of("beef", "chicken", "porkchop", "mutton", "rabbit", "cod", "salmon",
 			"potato", "kelp");
 

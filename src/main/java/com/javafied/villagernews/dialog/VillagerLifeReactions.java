@@ -28,32 +28,32 @@ import java.util.List;
  * being asked to trade.
  */
 public final class VillagerLifeReactions {
-	private static final String GREW_UP = "smvnbj";
-	private static final String BORN = "lgjtnf";
-	private static final String PARENTS_WELCOME_BABY = "fbuabj";
-	private static final String BABY_SPRINTS = "vhwksn";
-	private static final String BABY_SPRINTS_WEEKEND = "vbclem";
-	private static final String BABIES_PLAY_CHASE = "rfnirh";
-	private static final String SAW_SOMETHING_HURT = "pkvhpv";
-	private static final String SAW_VILLAGER_DIE = "pmqrpb";
-	private static final String IRON_GOLEM_FIGHTS_PLAYER = "qffeco";
-	private static final String BABY_ASKED_TO_TRADE = "aezdiy";
-	private static final String CURED = "ivumgm";
-	private static final String CURED_BABY = "ggitzq";
-	private static final String SPAWNED_BY_EGG = "vskjkl";
-	private static final String SPAWNED_BY_EGG_BABY = "abfwiv";
-	private static final String CELEBRATING = "wbbxpo";
-	private static final String CELEBRATING_BABY = "wsxfok";
-	private static final String CANNOT_TRADE = "zalmof";
-	private static final String NITWIT_CANNOT_TRADE = "nukxsf";
-	private static final String UNEMPLOYED_CANNOT_TRADE = "nlbhku";
+	private static final String GREW_UP = "grow_up";
+	private static final String BORN = "baby_villager_is_born";
+	private static final String PARENTS_WELCOME_BABY = "have_a_baby";
+	private static final String BABY_SPRINTS = "baby_villager_sprints";
+	private static final String BABY_SPRINTS_WEEKEND = "baby_sprints_on_the_weekend";
+	private static final String BABIES_PLAY_CHASE = "play_chase";
+	private static final String SAW_SOMETHING_HURT = "see_another_entity_get_hurt";
+	private static final String SAW_VILLAGER_DIE = "see_another_villager_die";
+	private static final String IRON_GOLEM_FIGHTS_PLAYER = "iron_golem_targets_the_player";
+	private static final String BABY_ASKED_TO_TRADE = "try_to_trade_with_a_baby_villager";
+	private static final String CURED = "cure_a_zombie_villager";
+	private static final String CURED_BABY = "cure_a_baby_zombie_villager";
+	private static final String SPAWNED_BY_EGG = "spawn_a_villager_with_a_spawn_egg";
+	private static final String SPAWNED_BY_EGG_BABY = "spawn_a_baby_with_a_spawn_egg";
+	private static final String CELEBRATING = "calm_down_after_danger";
+	private static final String CELEBRATING_BABY = "calm_down_after_a_scare";
+	private static final String CANNOT_TRADE = "cannot_trade";
+	private static final String NITWIT_CANNOT_TRADE = "try_to_trade_with_a_nitwit";
+	private static final String UNEMPLOYED_CANNOT_TRADE = "try_to_trade_with_an_unemployed_villager";
 	// Time jumping (sleeping through the night, /time set): day, night, or just "time skipped" (adult/baby).
-	private static final String SKIPPED_TO_DAY = "mgmzeh";
-	private static final String SKIPPED_TO_DAY_BABY = "wkwcrf";
-	private static final String SKIPPED_TO_NIGHT = "ohdwnz";
-	private static final String SKIPPED_TO_NIGHT_BABY = "msemoe";
-	private static final String TIME_SKIPPED = "uqwdqn";
-	private static final String TIME_SKIPPED_BABY = "durjjd";
+	private static final String SKIPPED_TO_DAY = "suddenly_turns_to_day";
+	private static final String SKIPPED_TO_DAY_BABY = "suddenly_turn_to_day";
+	private static final String SKIPPED_TO_NIGHT = "suddenly_turns_to_night";
+	private static final String SKIPPED_TO_NIGHT_BABY = "suddenly_turn_to_night";
+	private static final String TIME_SKIPPED = "time_skips";
+	private static final String TIME_SKIPPED_BABY = "skip_time";
 	private static final int TIME_SKIP_THRESHOLD = 4000;
 
 	private static final java.util.Set<Villager> celebrating = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());

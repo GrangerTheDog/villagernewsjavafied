@@ -44,14 +44,14 @@ class DialogLibraryTest {
 	@Test
 	void evaluatesComputedCooldowns() {
 		// Script: csiavd:{didrid:2*(jtzadj.csiavd.didrid??0)} with jtzadj.csiavd.didrid = 80.
-		assertEquals(160, library.get("vgysma").entityCooldown().same());
-		assertEquals(10, library.get("vgysma").entityCooldown().any(), "unset half keeps its default");
-		DialogLibrary.Line first = library.get("kxrhxt").lines().getFirst();
+		assertEquals(160, library.get("open_a_chest").entityCooldown().same());
+		assertEquals(10, library.get("open_a_chest").entityCooldown().any(), "unset half keeps its default");
+		DialogLibrary.Line first = library.get("give_a_villager_a_nose").lines().getFirst();
 		assertEquals(2, first.subtitles().size());
 		assertEquals(0.87, first.subtitles().get(1).time(), 1e-9);
 	}
 
-	/** Every dialog id the hand-ported triggers use must exist in the add-on. */
+	/** Every dialog the hand-ported triggers name must exist in the converted add-on. */
 	@Test
 	void portedTriggersReferenceRealDialogs() throws ReflectiveOperationException {
 		List<String> ids = new ArrayList<>();
@@ -60,7 +60,7 @@ class DialogLibraryTest {
 				VillagerRoutineReactions.class, WorldReactions.class, NoticeReactions.class,
 				HurtReactions.class, WorkReactions.class, UntouchableReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
-				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
+				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_") || field.getName().startsWith("PROPERTY_")
 						|| field.getName().startsWith("GROUP_") || field.getName().startsWith("BLOCK_") || field.getName().equals("TRADE_DIALOGS")) {
 					continue;
 				}
@@ -94,8 +94,9 @@ class DialogLibraryTest {
 		for (String id : ids) {
 			assertNotNull(library.get(id), "unknown dialog " + id);
 		}
-		assertTrue(VillagerReactions.calendarDialogs(LocalDate.of(2026, 12, 31)).containsAll(List.of("xljknt", "tkkegl")));
-		assertTrue(library.conversations().stream().anyMatch(c -> c.getFirst().startsWith("gmrypk")));
+		assertTrue(VillagerReactions.calendarDialogs(LocalDate.of(2026, 12, 31))
+				.containsAll(List.of("wander_on_new_years_eve", "wander_in_december")));
+		assertTrue(library.conversations().stream().anyMatch(c -> "both_noses".equals(library.get(c.getFirst()).group())));
 	}
 
 	/** Dialog ids held in records (a category's dialog, a remark's adult/second lines). */
@@ -113,10 +114,10 @@ class DialogLibraryTest {
 
 	@Test
 	void greetsByTheNearestReputationBand() {
-		assertEquals("clbjww", TradeReactions.greeting(0));
-		assertEquals("clbjww", TradeReactions.greeting(20));
-		assertEquals("kuhvdv", TradeReactions.greeting(60));
-		assertEquals("vlrsrn", TradeReactions.greeting(400));
-		assertEquals("xduuwm", TradeReactions.greeting(-500));
+		assertEquals("start_trading_with_neutral_reputation", TradeReactions.greeting(0));
+		assertEquals("start_trading_with_neutral_reputation", TradeReactions.greeting(20));
+		assertEquals("start_trading_with_high_reputation", TradeReactions.greeting(60));
+		assertEquals("start_trading_with_extremely_high_reputation", TradeReactions.greeting(400));
+		assertEquals("start_trading_with_extremely_low_reputation", TradeReactions.greeting(-500));
 	}
 }

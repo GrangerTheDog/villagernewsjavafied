@@ -2,6 +2,8 @@ package com.javafied.villagernews.converter;
 
 import com.google.gson.JsonObject;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -16,7 +18,7 @@ public final class LangConverter {
 	private LangConverter() {
 	}
 
-	public static int convert(Path resourcePack, Path outputAssetsDir) throws IOException {
+	public static int convert(Path resourcePack, Path outputAssetsDir, AddonNames names) throws IOException {
 		Path textsDir = resourcePack.resolve("texts");
 		if (!Files.isDirectory(textsDir)) {
 			return 0;
@@ -47,7 +49,7 @@ public final class LangConverter {
 						value = value.substring(0, tab);
 					}
 					value = value.strip();
-					out.addProperty(toJavaKey(key), value);
+					out.addProperty(toJavaKey(key, names), value);
 				}
 
 				ConverterUtil.writeJson(langOutDir.resolve(locale + ".json"), out);
@@ -70,11 +72,22 @@ public final class LangConverter {
 	 * registered under the same short id used as the path here (e.g.
 	 * "villagernewsjavafied:mlkxjo").
 	 */
-	private static String toJavaKey(String bedrockKey) {
+	private static String toJavaKey(String bedrockKey, AddonNames names) {
 		if (!bedrockKey.contains(":")) {
 			return bedrockKey;
 		}
-		String javaKey = bedrockKey.replaceAll("[A-Za-z0-9_]+:", ConverterUtil.MOD_ID + ".");
+		// The id after the namespace becomes the mod's readable one ("oreville_vn:ilvfra" -> "villagernewsjavafied.mayor").
+		java.util.regex.Matcher id = java.util.regex.Pattern.compile("[A-Za-z0-9_]+:([A-Za-z0-9_]+)").matcher(bedrockKey);
+		StringBuilder renamed = new StringBuilder();
+		while (id.find()) {
+			String name = names.name(AddonNames.Kind.ITEM, id.group(1));
+			if (name == null) {
+				name = names.name(AddonNames.Kind.CHARACTER, id.group(1));
+			}
+			id.appendReplacement(renamed, java.util.regex.Matcher.quoteReplacement(ConverterUtil.MOD_ID + "." + (name != null ? name : id.group(1))));
+		}
+		id.appendTail(renamed);
+		String javaKey = renamed.toString();
 		if (javaKey.endsWith(".name")) {
 			javaKey = javaKey.substring(0, javaKey.length() - ".name".length());
 		}

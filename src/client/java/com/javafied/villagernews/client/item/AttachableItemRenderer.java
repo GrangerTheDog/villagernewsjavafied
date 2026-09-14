@@ -2,11 +2,12 @@ package com.javafied.villagernews.client.item;
 
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.client.bedrock.BedrockGeoModel;
-import com.javafied.villagernews.client.bedrock.BedrockRuntime;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Layer;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Pose;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.RenderPlan;
+import com.javafied.villagernews.client.bedrock.BedrockRuntime;
 import com.javafied.villagernews.content.AttachableItem;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -78,7 +79,7 @@ final class AttachableItemRenderer extends GeoItemRenderer<AttachableItem> {
 	private static final Map<Identifier, Set<String>> BOUND_ROOTS = new ConcurrentHashMap<>();
 
 	AttachableItemRenderer(AttachableItem item) {
-		super(new Model(BuiltInRegistries.ITEM.getKey(item).getPath()));
+		super(new Model(AddonNames.item(BuiltInRegistries.ITEM.getKey(item).getPath())));
 	}
 
 	@Override

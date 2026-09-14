@@ -3,10 +3,11 @@ package com.javafied.villagernews.dialog;
 import com.javafied.villagernews.ConvertedPack;
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.content.ModAttachments;
-import com.javafied.villagernews.guide.GuideSettings;
 import com.javafied.villagernews.dialog.DialogLibrary.Dialog;
 import com.javafied.villagernews.dialog.DialogLibrary.Line;
 import com.javafied.villagernews.dialog.DialogLibrary.TagCooldown;
+import com.javafied.villagernews.guide.GuideSettings;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -194,6 +195,7 @@ public final class DialogEngine {
 	private final Map<Entity, Long> lastHurt = new WeakHashMap<>();
 	private final Map<Entity, Speech> speeches = new HashMap<>();
 	private final Map<String, Integer> lastLine = new HashMap<>();
+	private final Set<String> warnedMissing = new java.util.HashSet<>();
 	private final Map<Entity, Refusal> lastRefusal = new WeakHashMap<>();
 	/** When each speaker last said each dialog; "the nearest villager reacts" prefers who said it longest ago. */
 	private final Map<Entity, Map<String, Long>> lastSaid = new WeakHashMap<>();
@@ -215,6 +217,7 @@ public final class DialogEngine {
 				library = DialogLibrary.EMPTY;
 			}
 			VillagerNewsJavafied.LOGGER.info("Loaded {} villager dialogs", library.size());
+			checkNames(library);
 			current = new DialogEngine(server, library);
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> current = null);
@@ -223,6 +226,36 @@ public final class DialogEngine {
 				current.tick();
 			}
 		});
+	}
+
+	/** By readable name; a name the converted add-on doesn't have is logged once (a names file out of date). */
+	private Dialog dialog(String name) {
+		Dialog dialog = library.get(name);
+		if (dialog == null && !library.isEmpty() && warnedMissing.add(name)) {
+			VillagerNewsJavafied.LOGGER.warn("No dialog named '{}' in the converted add-on (version {})", name, AddonNames.current().version());
+		}
+		return dialog;
+	}
+
+	/**
+	 * Says so in the log if the converted add-on is a version the mod has no
+	 * names file for, or if dialogs the names file lists aren't in it: then
+	 * some reactions will stay quiet until the names file is updated.
+	 */
+	private static void checkNames(DialogLibrary library) {
+		AddonNames names = AddonNames.current();
+		if (library.isEmpty()) {
+			return;
+		}
+		if (!names.known()) {
+			VillagerNewsJavafied.LOGGER.warn("No names file for this add-on version; using {}'s. Dialogs named from the add-on's"
+					+ " guide still work; reactions that need the others may stay quiet.", names.version());
+		}
+		List<String> missing = names.all(AddonNames.Kind.DIALOG).keySet().stream().filter(name -> library.get(name) == null)
+				.sorted().toList();
+		if (!missing.isEmpty()) {
+			VillagerNewsJavafied.LOGGER.warn("{} dialogs from the names file aren't in the converted add-on: {}", missing.size(), missing);
+		}
 	}
 
 	/** Called when a line ends: {@code true} if it played out, {@code false} if it was cut short. */
@@ -248,7 +281,7 @@ public final class DialogEngine {
 	 * or is dropped after 2 seconds. False if it can't be said at all right now.
 	 */
 	public boolean request(LivingEntity speaker, String dialogId, Options options) {
-		Dialog dialog = library.get(dialogId);
+		Dialog dialog = dialog(dialogId);
 		String refusal = dialog == null ? "not in the add-on" : whyNot(speaker, options);
 		if (refusal == null) {
 			refusal = cooldownBlocking(speaker, dialog, options);
@@ -267,7 +300,7 @@ public final class DialogEngine {
 
 	/** Starts {@code dialogId} right away if it can, skipping the queue (replies in a conversation). */
 	public boolean speakNow(LivingEntity speaker, String dialogId, Options options) {
-		Dialog dialog = library.get(dialogId);
+		Dialog dialog = dialog(dialogId);
 		String refusal = dialog == null ? "not in the add-on" : whyNot(speaker, options);
 		return refusal == null ? start(speaker, dialog, options) : refuse(speaker, dialogId, refusal);
 	}
@@ -562,7 +595,7 @@ public final class DialogEngine {
 	 * add-on has no such dialog.
 	 */
 	public boolean exclaim(LivingEntity speaker, String dialogId) {
-		Dialog dialog = library.get(dialogId);
+		Dialog dialog = dialog(dialogId);
 		if (dialog == null || dialog.lines().isEmpty() || !speaker.isAlive()) {
 			return false;
 		}

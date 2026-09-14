@@ -6,7 +6,10 @@ import com.javafied.villagernews.behavior.BehaviorDefinitions.Definition;
 import com.javafied.villagernews.behavior.BehaviorDefinitions.Subsensor;
 import com.javafied.villagernews.behavior.BehaviorDefinitions.Trigger;
 import com.javafied.villagernews.content.ModAttachments;
+import com.javafied.villagernews.content.VillagerVariantKeys;
 import com.javafied.villagernews.dialog.DialogEngine;
+import com.javafied.villagernews.dialog.DialogLibrary;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -33,13 +36,13 @@ import java.util.concurrent.ThreadLocalRandom;
  * villagers that stand in for them: {@code entity_sensor} subsensors (players
  * in range matching filters, e.g. wearing iron armour or holding an emerald)
  * and {@code environment_sensor} triggers, firing the entity's events - which
- * set properties and, through {@code /scriptevent oreville_vn:gjlxaa <dialog>},
- * ask the {@link DialogEngine} for a line.
+ * set properties and, through a {@code /scriptevent} naming a dialog by its
+ * add-on id, ask the {@link DialogEngine} for a line.
  */
 public final class BehaviorSensors {
-	/** The script event the behavior pack uses to request a dialog (adult / baby speaker). */
-	private static final String DIALOG_EVENT = "oreville_vn:gjlxaa";
-	private static final String BABY_DIALOG_EVENT = "oreville_vn:gsxdsy";
+	/** The script events the behavior pack uses to request a dialog (adult / baby speaker). */
+	private static final String DIALOG_EVENT = "dialog";
+	private static final String BABY_DIALOG_EVENT = "baby_dialog";
 	private static final int MAX_EVENT_DEPTH = 8;
 
 	private static BehaviorDefinitions definitions = BehaviorDefinitions.EMPTY;
@@ -67,9 +70,14 @@ public final class BehaviorSensors {
 		return definitions;
 	}
 
-	/** The behavior definition a Java villager stands in for, by its add-on variant. */
+	/** The behavior definition a Java villager stands in for, by its character. */
 	public static Definition definitionOf(Villager villager) {
-		return definitions.get(villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, "villager"));
+		return definitionOfCharacter(villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT));
+	}
+
+	/** A character's behavior definition, by its readable name ({@code mayor}). */
+	public static Definition definitionOfCharacter(String character) {
+		return definitions.get(AddonNames.character(character));
 	}
 
 	private static void tick(MinecraftServer server) {
@@ -190,15 +198,17 @@ public final class BehaviorSensors {
 	private static void command(Villager villager, String command) {
 		String[] words = command.strip().replaceFirst("^/", "").split("\\s+");
 		DialogEngine engine = DialogEngine.get();
-		if (words.length >= 3 && words[0].equals("scriptevent")
-				&& (words[1].equals(DIALOG_EVENT) || words[1].equals(BABY_DIALOG_EVENT)) && engine != null) {
-			boolean baby = words[1].equals(BABY_DIALOG_EVENT);
+		String event = words.length >= 3 && words[0].equals("scriptevent")
+				? AddonNames.current().name(AddonNames.Kind.SCRIPT_EVENT, words[1]) : null;
+		if ((DIALOG_EVENT.equals(event) || BABY_DIALOG_EVENT.equals(event)) && engine != null) {
+			boolean baby = BABY_DIALOG_EVENT.equals(event);
 			boolean forced = words.length > 3 && words[3].equals("true");
 			DialogEngine.Options options = DialogEngine.Options.DEFAULT.withStates(baby ? DialogEngine.State.BABY : DialogEngine.State.ADULT);
 			if (forced) {
 				options = options.ignoringCooldowns(true, true, true).interrupting();
 			}
-			engine.request(villager, words[2], options);
+			DialogLibrary.Dialog dialog = engine.library().byAddonId(words[2]);
+			engine.request(villager, dialog != null ? dialog.id() : words[2], options);
 			return;
 		}
 		if (warnedCommands.add(words[0] + " " + (words.length > 1 ? words[1] : ""))) {

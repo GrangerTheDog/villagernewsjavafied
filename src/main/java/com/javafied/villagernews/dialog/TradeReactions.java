@@ -35,25 +35,35 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class TradeReactions {
 	/** Greetings by the player's reputation with the villager; the one closest to it is used. */
-	private static final Map<Integer, String> GREETING_BY_REPUTATION = Map.of(100, "vlrsrn", 50, "kuhvdv", 0, "clbjww",
-			-150, "qmdvft", -300, "xduuwm");
+	private static final Map<Integer, String> GREETING_BY_REPUTATION = Map.of(
+			100, "start_trading_with_extremely_high_reputation",
+			50, "start_trading_with_high_reputation",
+			0, "start_trading_with_neutral_reputation",
+			-150, "start_trading_with_low_reputation",
+			-300, "start_trading_with_extremely_low_reputation");
 
 	/** Per speaker kind: own greeting (said half the time), goodbye, goodbye after buying, after not buying, per purchase. */
 	private record Lines(String greeting, String bye, String boughtBye, String noPurchaseBye, String purchase) {
 	}
 
 	private static final Map<Kind, Lines> LINES = Map.of(
-			Kind.VILLAGER, new Lines(null, "laztau", "czvvwy", "lilimm", "xmkwxd"),
-			Kind.MAYOR, new Lines("njyapy", null, "shrrya", "bgzmea", null),
-			Kind.TESTIFICATE_MAN, new Lines("mpbnsm", "ctzfzj", "xcjort", "rdugrl", "xmkwxd"),
-			Kind.NUMBER_5, new Lines("sclaoa", "nfdery", "msofrj", "lilimm", "xmkwxd"),
-			Kind.NUMBER_9, new Lines("snnkrl", "hvjfnk", "czvvwy", "lilimm", "xmkwxd"),
-			Kind.TRADER, new Lines("yubpbb", "laztau", "uzdvsi", "erbcfn", "bvrbhy"));
-	private static final String LEVELLED_UP = "fltegg";
-	private static final String REACHED_MASTER = "pnvkfy";
+			Kind.VILLAGER, new Lines(null, "close_the_trading_window",
+					"close_trading_after_buying", "close_trading_without_buying", "complete_a_trade"),
+			Kind.MAYOR, new Lines("mayor_trade_greeting", null,
+					"mayor_trade_bye_bought", "mayor_trade_bye_no_purchase", null),
+			Kind.TESTIFICATE_MAN, new Lines("testificate_man_trade_greeting", "testificate_man_trade_bye",
+					"testificate_man_trade_bye_bought", "testificate_man_trade_bye_no_purchase", "complete_a_trade"),
+			Kind.NUMBER_5, new Lines("villager_5_trade_greeting", "villager_5_trade_bye",
+					"villager_5_trade_bye_bought", "close_trading_without_buying", "complete_a_trade"),
+			Kind.NUMBER_9, new Lines("villager_9_trade_greeting", "villager_9_trade_bye",
+					"close_trading_after_buying", "close_trading_without_buying", "complete_a_trade"),
+			Kind.TRADER, new Lines("wandering_trader_trade_greeting", "close_the_trading_window",
+					"wandering_trader_trade_bye_bought", "wandering_trader_trade_bye_no_purchase", "wandering_trader_complete_a_trade"));
+	private static final String LEVELLED_UP = "level_up";
+	private static final String REACHED_MASTER = "reach_master_level";
 	/** Refusals the add-on ships but never uses: during a raid, and to a player the villager can't stand. */
-	private static final String REFUSES_DURING_RAID = "klabhl";
-	private static final String REFUSES_DISLIKED_PLAYER = "lhdgsy";
+	private static final String REFUSES_DURING_RAID = "refuses_to_trade_during_a_raid";
+	private static final String REFUSES_DISLIKED_PLAYER = "refuses_a_low_reputation_player";
 	/**
 	 * At or below this reputation a villager won't trade with the player at
 	 * all. Java's reputation runs down to -700 (iron golems turn on a player

@@ -30,7 +30,7 @@ class GuideConverterTest {
 		try (Stream<Path> files = Files.walk(src)) {
 			Path script = files.filter(p -> p.toString().endsWith(".js") && p.toString().contains("scripts")).findFirst().orElse(null);
 			assumeTrue(script != null, "no behavior script");
-			guide = GuideConverter.extract(Files.readString(script));
+			guide = GuideConverter.extract(Files.readString(script), com.javafied.villagernews.names.AddonNames.forVersion("1.0.4"));
 		}
 		assertNotNull(guide, "handbook not found");
 		Files.writeString(Path.of("build/guide-test.json"), new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(guide));

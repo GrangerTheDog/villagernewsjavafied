@@ -8,6 +8,7 @@ import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
 import com.javafied.villagernews.dialog.DialogEngine.Options;
 import com.javafied.villagernews.dialog.DialogEngine.State;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonPrimitive;
 
@@ -47,33 +48,35 @@ import java.util.concurrent.ThreadLocalRandom;
  * player starts with.
  */
 public final class VillagerItemReactions {
-	/** The add-on property holding what a villager wears ("none" or an item id's path). */
-	private static final String ACCESSORY = "p:mlxeez";
+	/** The property holding what a villager wears ("none" or the item's add-on id). */
+	private static final String PROPERTY_ACCESSORY = "accessory";
 	/** Whether the villager still has its nose. */
-	private static final String NOSE = "p:gcfsvg";
+	private static final String PROPERTY_NOSE = "nose";
 	private static final String NONE = "none";
 	/** Which sign a villager holds up: the wood's index in {@link #SIGN_WOODS}, -1 for none. */
-	private static final String SIGN = "p:sign";
+	private static final String PROPERTY_SIGN = "sign";
 	/** Which of the sign's messages faces out. */
-	private static final String SIGN_MESSAGE = "p:wjnyei";
+	private static final String PROPERTY_SIGN_MESSAGE = "sign_message";
 	private static final int SIGN_MESSAGES = 87;
 	private static final List<String> SIGN_WOODS = List.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
 			"mangrove", "cherry", "pale_oak", "bamboo", "crimson", "warped");
-	private static final String GIVEN_SIGN = "vqlrqf";
+	private static final String GIVEN_SIGN = "give_a_villager_a_sign";
 
-	private static final String TAKEN_ACCESSORY = "ckjbyd";
-	private static final String TAKEN_NOSE = "jktrnd";
-	private static final String NOSE_RETURNED = "kxrhxt";
-	private static final String ALREADY_HAS_NOSE = "akfekx";
-	private static final String DRESSES_THEMSELVES = "orogba";
-	private static final String SAW_MY_NOSE = "kejscw";
-	private static final String ITEM_MICROPHONE = "dsojot";
-	/** Reaction to being given each accessory (by item id), for adults (said twice as often as {@link #DRESSES_THEMSELVES}) and babies. */
-	private static final Map<String, String> ADULT_GIFT = Map.of("ufernq", "wurmgu", ITEM_MICROPHONE, "inirxg", "odplew", "ozxzla");
-	private static final Map<String, String> BABY_GIFT = Map.of("cryhjc", "svdjdk", "ufernq", "cxeziv", ITEM_MICROPHONE, "riezum",
-			"odplew", "rlkdqd");
-	/** What villagers can be given to wear: Mayor Hat, Testificate Man Helmet, Microphone, Moustache. */
-	private static final Set<String> ACCESSORIES = Set.of("cryhjc", "ufernq", ITEM_MICROPHONE, "odplew");
+	private static final String TAKEN_ACCESSORY = "remove_a_cosmetic";
+	private static final String TAKEN_NOSE = "shear_off_a_villagers_nose";
+	private static final String NOSE_RETURNED = "give_a_villager_a_nose";
+	private static final String ALREADY_HAS_NOSE = "try_to_give_a_second_nose";
+	private static final String DRESSES_THEMSELVES = "give_a_villager_a_cosmetic";
+	private static final String SAW_MY_NOSE = "wear_a_villager_nose";
+	private static final String ITEM_MICROPHONE = "microphone";
+	/** Reaction to being given each accessory (by item), for adults (said twice as often as {@link #DRESSES_THEMSELVES}) and babies. */
+	private static final Map<String, String> ADULT_GIFT = Map.of("testificate_man_helmet", "give_a_villager_testificate_mans_helmet",
+			ITEM_MICROPHONE, "give_a_villager_a_microphone", "moustache", "give_a_villager_a_moustache");
+	private static final Map<String, String> BABY_GIFT = Map.of("mayor_hat", "give_a_baby_the_mayor_hat",
+			"testificate_man_helmet", "give_a_baby_testificate_mans_helmet", ITEM_MICROPHONE, "give_a_baby_villager_9s_microphone",
+			"moustache", "give_a_baby_villager_5s_moustache");
+	/** What villagers can be given to wear. */
+	private static final Set<String> ACCESSORIES = Set.of("mayor_hat", "testificate_man_helmet", ITEM_MICROPHONE, "moustache");
 
 	private static final Map<Player, Boolean> wearingNose = new WeakHashMap<>();
 
@@ -108,16 +111,16 @@ public final class VillagerItemReactions {
 	}
 
 	private static void interact(ServerLevel level, Player player, Villager villager, ItemStack stack, BehaviorProperties properties) {
-		String accessory = String.valueOf(properties.get(ACCESSORY));
-		boolean hasNose = !Boolean.FALSE.equals(properties.get(NOSE));
+		String accessory = AddonNames.nameOf(AddonNames.Kind.ITEM, String.valueOf(properties.named(PROPERTY_ACCESSORY)));
+		boolean hasNose = !Boolean.FALSE.equals(properties.named(PROPERTY_NOSE));
 		if (stack.is(Items.SHEARS)) {
 			if (!NONE.equals(accessory)) {
 				dropFromHead(level, villager, new ItemStack(BuiltInRegistries.ITEM.getValue(VillagerNewsJavafied.id(accessory))));
-				properties.set(ACCESSORY, new JsonPrimitive(NONE));
+				properties.setNamed(PROPERTY_ACCESSORY, new JsonPrimitive(NONE));
 				react(villager, player, TAKEN_ACCESSORY, State.ADULT);
 			} else if (hasNose && !villager.isBaby()) {
 				dropFromHead(level, villager, new ItemStack(ModItems.VILLAGER_NOSE));
-				properties.set(NOSE, new JsonPrimitive(false));
+				properties.setNamed(PROPERTY_NOSE, new JsonPrimitive(false));
 				react(villager, player, TAKEN_NOSE, State.ADULT);
 			}
 			return;
@@ -128,7 +131,7 @@ public final class VillagerItemReactions {
 			}
 			if (!hasNose) {
 				stack.consume(1, player);
-				properties.set(NOSE, new JsonPrimitive(true));
+				properties.setNamed(PROPERTY_NOSE, new JsonPrimitive(true));
 				react(villager, player, NOSE_RETURNED, State.ADULT);
 			} else {
 				DialogEngine engine = DialogEngine.get();
@@ -144,7 +147,7 @@ public final class VillagerItemReactions {
 		}
 		String item = itemPath(stack);
 		stack.consume(1, player);
-		properties.set(ACCESSORY, new JsonPrimitive(item));
+		properties.setNamed(PROPERTY_ACCESSORY, new JsonPrimitive(AddonNames.item(item)));
 		if (villager.isBaby()) {
 			react(villager, player, BABY_GIFT.get(item), State.BABY);
 		} else {
@@ -162,7 +165,7 @@ public final class VillagerItemReactions {
 	 * @return whether the sign handling took the interaction
 	 */
 	private static boolean sign(ServerLevel level, Player player, Villager villager, ItemStack stack, BehaviorProperties properties) {
-		int held = properties.get(SIGN) instanceof Double index ? index.intValue() : -1;
+		int held = properties.named(PROPERTY_SIGN) instanceof Double index ? index.intValue() : -1;
 		boolean creative = player.getAbilities().instabuild;
 		if (stack.is(Items.SHEARS)) {
 			if (held < 0) {
@@ -172,12 +175,12 @@ public final class VillagerItemReactions {
 				dropFromHands(level, villager, signItem(held));
 			}
 			level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.SHEEP_SHEAR, SoundSource.NEUTRAL, 1f, 1f);
-			properties.set(SIGN, new JsonPrimitive(-1));
+			properties.setNamed(PROPERTY_SIGN, new JsonPrimitive(-1));
 			return true;
 		}
 		if (stack.is(ItemTags.AXES)) {
-			int message = properties.get(SIGN_MESSAGE) instanceof Double index ? index.intValue() : 0;
-			properties.set(SIGN_MESSAGE, new JsonPrimitive(Math.floorMod(message + (player.isShiftKeyDown() ? -1 : 1), SIGN_MESSAGES)));
+			int message = properties.named(PROPERTY_SIGN_MESSAGE) instanceof Double index ? index.intValue() : 0;
+			properties.setNamed(PROPERTY_SIGN_MESSAGE, new JsonPrimitive(Math.floorMod(message + (player.isShiftKeyDown() ? -1 : 1), SIGN_MESSAGES)));
 			level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.HORSE_STEP_WOOD, SoundSource.NEUTRAL, 1f, 1f);
 			return true;
 		}
@@ -185,10 +188,10 @@ public final class VillagerItemReactions {
 		if (given == held) {
 			return true;
 		}
-		if (ITEM_MICROPHONE.equals(properties.get(ACCESSORY))) {
+		if (ITEM_MICROPHONE.equals(AddonNames.nameOf(AddonNames.Kind.ITEM, String.valueOf(properties.named(PROPERTY_ACCESSORY))))) {
 			level.addFreshEntity(new ItemEntity(level, villager.getX(), villager.getEyeY(), villager.getZ(),
 					new ItemStack(BuiltInRegistries.ITEM.getValue(VillagerNewsJavafied.id(ITEM_MICROPHONE)))));
-			properties.set(ACCESSORY, new JsonPrimitive(NONE));
+			properties.setNamed(PROPERTY_ACCESSORY, new JsonPrimitive(NONE));
 		}
 		if (!creative) {
 			stack.shrink(1);
@@ -197,9 +200,9 @@ public final class VillagerItemReactions {
 			}
 		}
 		level.playSound(null, villager.getX(), villager.getY() + 0.5, villager.getZ(), SoundEvents.HORSE_STEP_WOOD, SoundSource.NEUTRAL, 1f, 1f);
-		properties.set(SIGN, new JsonPrimitive(given));
+		properties.setNamed(PROPERTY_SIGN, new JsonPrimitive(given));
 		if (held < 0) {
-			properties.set(SIGN_MESSAGE, new JsonPrimitive(ThreadLocalRandom.current().nextInt(SIGN_MESSAGES)));
+			properties.setNamed(PROPERTY_SIGN_MESSAGE, new JsonPrimitive(ThreadLocalRandom.current().nextInt(SIGN_MESSAGES)));
 		}
 		Reactions.say(villager, GIVEN_SIGN, Options.DEFAULT);
 		return true;
@@ -217,7 +220,7 @@ public final class VillagerItemReactions {
 	}
 
 	private static boolean holdsSign(Villager villager) {
-		String held = villager.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.of()).get(SIGN);
+		String held = BehaviorProperties.read(villager, AddonNames.property(PROPERTY_SIGN));
 		return held != null && !held.equals("-1");
 	}
 

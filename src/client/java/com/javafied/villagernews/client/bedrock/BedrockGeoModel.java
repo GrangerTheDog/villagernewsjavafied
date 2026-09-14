@@ -2,6 +2,7 @@ package com.javafied.villagernews.client.bedrock;
 
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.RenderPlan;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.geckolib.cache.BakedModelCache;
 import com.geckolib.cache.model.BakedGeoModel;
@@ -28,7 +29,7 @@ public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 
 	private final Function<Entity, String> clientEntity;
 
-	/** @param clientEntity which add-on client entity (e.g. "oreville_vn:villager") a given Java entity is drawn as */
+	/** @param clientEntity which character (readable name, e.g. "mayor") a given Java entity is drawn as */
 	public BedrockGeoModel(Function<Entity, String> clientEntity) {
 		this.clientEntity = clientEntity;
 	}
@@ -37,7 +38,7 @@ public final class BedrockGeoModel extends GeoModel<BedrockAnimatable> {
 	public void addAdditionalStateData(BedrockAnimatable animatable, Object relatedObject, GeoRenderState renderState) {
 		renderState.addGeckolibData(FILLED, true);
 		if (relatedObject instanceof Entity entity) {
-			RenderPlan plan = BedrockRuntime.evaluate(entity, clientEntity.apply(entity), renderState.getPartialTick());
+			RenderPlan plan = BedrockRuntime.evaluate(entity, AddonNames.character(clientEntity.apply(entity)), renderState.getPartialTick());
 			if (plan != null && !plan.layers().isEmpty()) {
 				renderState.addGeckolibData(PLAN, plan);
 			}

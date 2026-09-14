@@ -37,59 +37,67 @@ import java.util.WeakHashMap;
  * witch potions, and players teleporting with ender pearls.
  */
 public final class HurtReactions {
-	private static final String BABY_HURT_BY_PLAYER = "ahcvzd";
-	private static final String HIT_BY_FIREWORK = "gesjov";
-	private static final String HIT_BY_SPLASH_POTION = "hmadgp";
-	private static final String ATTACKED_AT_HOME = "lpuocy";
-	private static final String ATTACKED_AT_HOME_WITNESSED = "slbqfwswxeva";
-	private static final String WITNESS_RESPONDS = "slbqfwbayahw";
-	private static final String HIT_BY_SWORD = "rueszy";
-	private static final String HIT_BY_AXE = "yjctyw";
-	private static final String HIT_BY_SHOVEL = "hpnsfu";
-	private static final String HIT_BY_HOE = "qqyjjg";
-	private static final String HIT = "vevdkl";
-	private static final String HIT_BY_WITCH = "rtikom";
-	private static final String HIT_BY_HARMING_POTION = "gacgtq";
+	private static final String BABY_HURT_BY_PLAYER = "player_hurts_a_baby_villager";
+	private static final String HIT_BY_FIREWORK = "attacked_with_a_firework";
+	private static final String HIT_BY_SPLASH_POTION = "attacked_with_a_splash_potion";
+	private static final String ATTACKED_AT_HOME = "attacked_inside_their_home";
+	private static final String ATTACKED_AT_HOME_WITNESSED = "attack_a_villager_at_home_with_witnesses";
+	private static final String WITNESS_RESPONDS = "attacked_at_home_witness_responds";
+	private static final String HIT_BY_SWORD = "attacked_with_a_sword";
+	private static final String HIT_BY_AXE = "attacked_with_an_axe";
+	private static final String HIT_BY_SHOVEL = "attacked_with_a_shovel";
+	private static final String HIT_BY_HOE = "attacked_with_a_hoe";
+	private static final String HIT = "hurt_by_player";
+	private static final String HIT_BY_WITCH = "hit_by_witch";
+	private static final String HIT_BY_HARMING_POTION = "harming_potion";
 	/** Hurt by a mob, and whether to wait until it's gone (or over 10 blocks away) to say it. */
 	private record MobLine(String dialog, boolean waitUntilGone) {
 	}
 
-	private static final Map<String, MobLine> HIT_BY_MOB = Map.of("zoglin", new MobLine("hfmwvf", true),
-			"vindicator", new MobLine("swomdw", true), "evoker", new MobLine("nkcoqb", false),
-			"ravager", new MobLine("uveohs", true), "vex", new MobLine("caykki", true), "zombie", new MobLine("mytmrk", true),
-			"pillager", new MobLine("qhpyaw", true), "tnt", new MobLine("fcbygh", false));
+	private static final Map<String, MobLine> HIT_BY_MOB = Map.of("zoglin", new MobLine("zoglin", true),
+			"vindicator", new MobLine("vindicator", true), "evoker", new MobLine("evoker", false),
+			"ravager", new MobLine("ravager", true), "vex", new MobLine("vex", true), "zombie", new MobLine("hit_by_zombie", true),
+			"pillager", new MobLine("pillager", true), "tnt", new MobLine("tnt", false));
 	/** Hurt by the world, and whether that line ignores the speaker's and the world's cooldowns. */
 	private record CauseLine(String dialog, boolean ignoreCooldowns) {
 	}
 
 	private static final Map<ResourceKey<DamageType>, CauseLine> HIT_BY_CAUSE = Map.ofEntries(
-			Map.entry(DamageTypes.FALLING_ANVIL, new CauseLine("yzqpvi", true)),
-			Map.entry(DamageTypes.FALLING_STALACTITE, new CauseLine("nsxmkr", true)),
-			Map.entry(DamageTypes.STALAGMITE, new CauseLine("nsxmkr", true)),
-			Map.entry(DamageTypes.CACTUS, new CauseLine("rogpvp", false)),
-			Map.entry(DamageTypes.SWEET_BERRY_BUSH, new CauseLine("rogpvp", false)),
-			Map.entry(DamageTypes.FREEZE, new CauseLine("igebly", false)), Map.entry(DamageTypes.FALL, new CauseLine("cifbit", true)),
-			Map.entry(DamageTypes.IN_FIRE, new CauseLine("etkxko", false)), Map.entry(DamageTypes.ON_FIRE, new CauseLine("etkxko", false)),
-			Map.entry(DamageTypes.CAMPFIRE, new CauseLine("etkxko", false)), Map.entry(DamageTypes.LAVA, new CauseLine("elryje", false)),
-			Map.entry(DamageTypes.IN_WALL, new CauseLine("vnaodx", false)));
-	private static final Map<String, String> HIT_BY_PROJECTILE = Map.of("arrow", "huhcbd", "spectral_arrow", "huhcbd",
-			"snowball", "dlrxes");
-	private static final String FREED_FROM_SUFFOCATING = "fxbysi";
+			Map.entry(DamageTypes.FALLING_ANVIL, new CauseLine("falling_anvil", true)),
+			Map.entry(DamageTypes.FALLING_STALACTITE, new CauseLine("pointed_dripstone", true)),
+			Map.entry(DamageTypes.STALAGMITE, new CauseLine("pointed_dripstone", true)),
+			Map.entry(DamageTypes.CACTUS, new CauseLine("cactus", false)),
+			Map.entry(DamageTypes.SWEET_BERRY_BUSH, new CauseLine("cactus", false)),
+			Map.entry(DamageTypes.FREEZE, new CauseLine("freezing", false)), Map.entry(DamageTypes.FALL,
+			new CauseLine("falling", true)),
+			Map.entry(DamageTypes.IN_FIRE, new CauseLine("burning", false)), Map.entry(DamageTypes.ON_FIRE,
+			new CauseLine("burning", false)),
+			Map.entry(DamageTypes.CAMPFIRE, new CauseLine("burning", false)), Map.entry(DamageTypes.LAVA,
+			new CauseLine("lava", false)),
+			Map.entry(DamageTypes.IN_WALL, new CauseLine("suffocation", false)));
+	private static final Map<String, String> HIT_BY_PROJECTILE = Map.of("arrow", "attacked_with_an_arrow", "spectral_arrow",
+			"attacked_with_an_arrow",
+			"snowball", "snowball");
+	private static final String FREED_FROM_SUFFOCATING = "free_a_suffocating_villager";
 	private static final int SUFFOCATION_ESCAPE_TICKS = 30;
-	private static final String CALMED_DOWN = "wbbxpo";
-	private static final String CALMED_DOWN_BABY = "wsxfok";
+	private static final String CALMED_DOWN = "calm_down_after_danger";
+	private static final String CALMED_DOWN_BABY = "calm_down_after_a_scare";
 	private static final int CALM_DOWN_TICKS = 200;
 	/** Special characters hurt: by a player / by anything else. */
 	private record CharacterLines(String byPlayer, String otherwise) {
 	}
 
-	private static final Map<Kind, CharacterLines> CHARACTER_HURT = Map.of(Kind.MAYOR, new CharacterLines("ltdnvy", "ssbhiv"),
-			Kind.TRADER, new CharacterLines("vevdkl", null), Kind.TESTIFICATE_MAN, new CharacterLines("fzoqwd", "fzoqwd"),
-			Kind.NUMBER_5, new CharacterLines("behifz", "behifz"), Kind.NUMBER_9, new CharacterLines("asuufu", "wrbvvp"),
-			Kind.WOOLY, new CharacterLines("ncyeaw", "eyiraw"));
+	private static final Map<Kind, CharacterLines> CHARACTER_HURT = Map.of(Kind.MAYOR,
+			new CharacterLines("mayor_hurt_by_player", "mayor_hurt"),
+			Kind.TRADER, new CharacterLines("hurt_by_player", null), Kind.TESTIFICATE_MAN,
+			new CharacterLines("testificate_man_hurt", "testificate_man_hurt"),
+			Kind.NUMBER_5, new CharacterLines("villager_5_hurt", "villager_5_hurt"), Kind.NUMBER_9,
+			new CharacterLines("villager_9_hurt_by_player", "villager_9_hurt"),
+			Kind.WOOLY, new CharacterLines("wooly_hurt_by_player", "wooly_hurt"));
 	/** Witches' potions taking effect on a villager, by effect id. */
-	private static final Map<String, String> WITCH_POTION = Map.of("weakness", "yebifs", "slowness", "xemyaj", "poison", "onindz");
-	private static final String ENDER_PEARL_TELEPORT = "mewsnd";
+	private static final Map<String, String> WITCH_POTION = Map.of("weakness", "weakness_potion", "slowness",
+			"slowness_potion", "poison", "poison_potion");
+	private static final String ENDER_PEARL_TELEPORT = "teleport_with_an_ender_pearl";
 
 	private static final Map<LivingEntity, Long> lastHurt = new WeakHashMap<>();
 	private static final Map<LivingEntity, Long> lastSuffocation = new WeakHashMap<>();

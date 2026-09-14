@@ -5,22 +5,23 @@ import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
 import com.javafied.villagernews.content.SpecialCharacters;
 import com.javafied.villagernews.content.VillagerCommand;
+import com.javafied.villagernews.dialog.BlockUseReactions;
 import com.javafied.villagernews.dialog.DialogDebug;
 import com.javafied.villagernews.dialog.DialogEngine;
-import com.javafied.villagernews.dialog.BlockUseReactions;
 import com.javafied.villagernews.dialog.DialogPayloads;
-import com.javafied.villagernews.guide.GuidePayloads;
-import com.javafied.villagernews.guide.GuideSettings;
-import com.javafied.villagernews.dialog.PlayerActionReactions;
-import com.javafied.villagernews.dialog.VillagerLifeReactions;
 import com.javafied.villagernews.dialog.HurtReactions;
 import com.javafied.villagernews.dialog.NoticeReactions;
-import com.javafied.villagernews.dialog.VillagerRoutineReactions;
-import com.javafied.villagernews.dialog.WorldReactions;
+import com.javafied.villagernews.dialog.PlayerActionReactions;
 import com.javafied.villagernews.dialog.TradeReactions;
 import com.javafied.villagernews.dialog.UntouchableReactions;
 import com.javafied.villagernews.dialog.VillagerItemReactions;
+import com.javafied.villagernews.dialog.VillagerLifeReactions;
 import com.javafied.villagernews.dialog.VillagerReactions;
+import com.javafied.villagernews.dialog.VillagerRoutineReactions;
+import com.javafied.villagernews.dialog.WorldReactions;
+import com.javafied.villagernews.guide.GuidePayloads;
+import com.javafied.villagernews.guide.GuideSettings;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.fabricmc.api.ModInitializer;
 
@@ -37,6 +38,7 @@ public class VillagerNewsJavafied implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		LOGGER.info("Villager News: Javafied initializing");
+		AddonNames.setVersionSource(ConvertedPack::addonVersion);
 		ModAttachments.init();
 		ModItems.init();
 		VillagerCommand.init();

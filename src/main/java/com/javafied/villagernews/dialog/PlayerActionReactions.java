@@ -38,89 +38,98 @@ import java.util.function.Predicate;
  */
 public final class PlayerActionReactions {
 	// Placing blocks: an exact block first, then categories in the add-on's order, then the generic line.
-	private static final Map<String, String> PLACED_BLOCK = Map.ofEntries(Map.entry("melon", "veaotb"),
-			Map.entry("beacon", "fazcvg"), Map.entry("bookshelf", "nziize"), Map.entry("chiseled_bookshelf", "nziize"),
-			Map.entry("jack_o_lantern", "ahabbf"), Map.entry("end_stone", "nocwsk"), Map.entry("bricks", "fwiopr"),
-			Map.entry("jukebox", "dgrgul"), Map.entry("lever", "piupkf"), Map.entry("observer", "nwiopk"),
-			Map.entry("chest", "ktkmhn"), Map.entry("trapped_chest", "jtsycy"), Map.entry("tripwire_hook", "wwmhos"),
-			Map.entry("detector_rail", "edjqet"), Map.entry("daylight_detector", "adtdit"), Map.entry("sculk_sensor", "wsjvjd"),
-			Map.entry("calibrated_sculk_sensor", "wsjvjd"), Map.entry("redstone_wire", "qbuuop"), Map.entry("repeater", "cdltxm"),
-			Map.entry("redstone_torch", "bimuve"), Map.entry("redstone_wall_torch", "bimuve"), Map.entry("redstone_lamp", "hlxzen"),
-			Map.entry("copper_block", "gnbpco"), Map.entry("lapis_block", "lnhdzn"), Map.entry("emerald_block", "afdrdd"),
-			Map.entry("diamond_block", "clpxov"), Map.entry("pumpkin", "ydfscf"), Map.entry("carved_pumpkin", "ydfscf"),
-			Map.entry("snow_block", "whbvvh"), Map.entry("snow", "whbvvh"), Map.entry("crafting_table", "nxveql"),
-			Map.entry("furnace", "fpcepp"), Map.entry("powder_snow", "ehtaer"));
-	private static final String PLACED_LIGHTNING_ROD = "ntnicx";
-	private static final String PLACED_IRON_GOLEM_FRAME = "gjsote";
+	private static final Map<String, String> PLACED_BLOCK = Map.ofEntries(Map.entry("melon", "place_a_melon"),
+			Map.entry("beacon", "place_a_beacon"), Map.entry("bookshelf", "place_a_bookshelf"),
+			Map.entry("chiseled_bookshelf", "place_a_bookshelf"),
+			Map.entry("jack_o_lantern", "place_a_jack_o_lantern"), Map.entry("end_stone", "place_end_stone"),
+			Map.entry("bricks", "place_bricks"),
+			Map.entry("jukebox", "place_a_jukebox"), Map.entry("lever", "place_a_lever"), Map.entry("observer", "place_an_observer"),
+			Map.entry("chest", "place_a_chest"), Map.entry("trapped_chest", "place_a_trapped_chest"),
+			Map.entry("tripwire_hook", "place_a_tripwire_hook"),
+			Map.entry("detector_rail", "place_a_detector_rail"), Map.entry("daylight_detector", "place_a_daylight_detector"),
+			Map.entry("sculk_sensor", "place_a_sculk_sensor"),
+			Map.entry("calibrated_sculk_sensor", "place_a_sculk_sensor"), Map.entry("redstone_wire", "place_redstone_dust"),
+			Map.entry("repeater", "place_a_redstone_repeater"),
+			Map.entry("redstone_torch", "place_a_redstone_torch"), Map.entry("redstone_wall_torch",
+			"place_a_redstone_torch"), Map.entry("redstone_lamp", "place_a_redstone_lamp"),
+			Map.entry("copper_block", "place_a_copper_block"), Map.entry("lapis_block", "place_a_lapis_block"),
+			Map.entry("emerald_block", "place_an_emerald_block"),
+			Map.entry("diamond_block", "place_a_diamond_block"), Map.entry("pumpkin", "place_a_pumpkin"),
+			Map.entry("carved_pumpkin", "place_a_pumpkin"),
+			Map.entry("snow_block", "place_snow"), Map.entry("snow", "place_snow"), Map.entry("crafting_table",
+			"place_a_crafting_table"),
+			Map.entry("furnace", "place_a_furnace"), Map.entry("powder_snow", "place_powder_snow"));
+	private static final String PLACED_LIGHTNING_ROD = "place_a_lightning_rod";
+	private static final String PLACED_IRON_GOLEM_FRAME = "build_an_iron_golem_frame";
 
 	private record Category(Predicate<BlockState> test, String dialog) {
 	}
 
 	private static final List<Category> PLACED_CATEGORIES = List.of(
-			new Category(BlockCategories::light, "yckvyp"),
-			new Category(state -> state.is(BlockTags.BUTTONS), "rtmqmc"),
+			new Category(BlockCategories::light, "place_a_light_block"),
+			new Category(state -> state.is(BlockTags.BUTTONS), "place_a_button"),
 			// The add-on checks a suffix its minifier mangled, so in Bedrock this one never fires; restored.
-			new Category(state -> state.is(BlockTags.PRESSURE_PLATES), "jggged"),
-			new Category(BlockCategories::redstone, "hqmkpb"),
-			new Category(state -> state.is(BlockTags.WOOL), "fvdzot"),
-			new Category(BlockCategories::ocean, "rseoxb"),
-			new Category(BlockCategories::ice, "gzzzpj"),
-			new Category(BlockCategories::purpur, "ejbqqc"),
-			new Category(BlockCategories::end, "qyvelv"),
-			new Category(BlockCategories::nether, "kodgox"),
-			new Category(BlockCategories::glass, "sbolpm"),
-			new Category(BlockCategories::concrete, "zqzrsm"),
-			new Category(BlockCategories::concretePowder, "negvfb"),
-			new Category(state -> state.is(BlockTags.DIRT), "xezbvo"),
-			new Category(BlockCategories::terracotta, "gxepwi"),
+			new Category(state -> state.is(BlockTags.PRESSURE_PLATES), "place_a_pressure_plate"),
+			new Category(BlockCategories::redstone, "place_a_redstone_component"),
+			new Category(state -> state.is(BlockTags.WOOL), "place_wool"),
+			new Category(BlockCategories::ocean, "place_a_block_from_the_ocean"),
+			new Category(BlockCategories::ice, "place_ice"),
+			new Category(BlockCategories::purpur, "place_purpur"),
+			new Category(BlockCategories::end, "place_a_block_from_the_end"),
+			new Category(BlockCategories::nether, "place_a_block_from_the_nether"),
+			new Category(BlockCategories::glass, "place_glass"),
+			new Category(BlockCategories::concrete, "place_concrete"),
+			new Category(BlockCategories::concretePowder, "place_concrete_powder"),
+			new Category(state -> state.is(BlockTags.DIRT), "place_dirt"),
+			new Category(BlockCategories::terracotta, "place_terracotta"),
 			new Category(state -> false, PLACED_IRON_GOLEM_FRAME), // needs the position: see placed()
-			new Category(state -> state.is(Blocks.IRON_BLOCK), "vgufsp"),
-			new Category(BlockCategories::valuable, "oimgrg"),
-			new Category(BlockCategories::workstation, "ujkoue"),
-			new Category(state -> state.is(BlockTags.BEDS), "kdfaao"),
-			new Category(BlockCategories::wood, "mxmrpn"),
-			new Category(BlockCategories::gravity, "tqnwzp"),
-			new Category(BlockCategories::creativeOnly, "fdqdok"),
-			new Category(BlockCategories::plant, "vubtsn"),
-			new Category(BlockCategories::gold, "vxhugl"),
-			new Category(BlockCategories::glazedTerracotta, "cudgjr"),
-			new Category(state -> true, "knywuy"));
+			new Category(state -> state.is(Blocks.IRON_BLOCK), "place_an_iron_block"),
+			new Category(BlockCategories::valuable, "place_a_valuable_block"),
+			new Category(BlockCategories::workstation, "place_a_workstation"),
+			new Category(state -> state.is(BlockTags.BEDS), "place_a_bed"),
+			new Category(BlockCategories::wood, "place_wood"),
+			new Category(BlockCategories::gravity, "place_a_gravity_affected_block"),
+			new Category(BlockCategories::creativeOnly, "place_a_creative_only_block"),
+			new Category(BlockCategories::plant, "place_leaves_or_plants"),
+			new Category(BlockCategories::gold, "place_a_gold_block"),
+			new Category(BlockCategories::glazedTerracotta, "place_glazed_terracotta"),
+			new Category(state -> true, "place_a_block"));
 
 	// Breaking blocks.
-	private static final String BROKE_MANY = "awappv";
-	private static final String BROKE_BELL = "rptjbd";
-	private static final String BROKE_BED = "osbwpz";
-	private static final String BROKE_DOOR = "qimink";
-	private static final String BROKE_WORKSTATION = "mabmbl";
-	private static final String BROKE_WOOD = "ejvpis";
-	private static final String HARVESTED_CROPS = "tdomqw";
-	private static final String HARVESTED_NEAR_FARMER = "gytgzn";
-	private static final String BROKE_STONE = "clzrea";
-	private static final String BROKE_DECORATION = "pclmft";
-	private static final String BROKE_BLOCK = "zejman";
+	private static final String BROKE_MANY = "break_multiple_blocks";
+	private static final String BROKE_BELL = "break_a_bell";
+	private static final String BROKE_BED = "break_a_bed";
+	private static final String BROKE_DOOR = "break_a_door";
+	private static final String BROKE_WORKSTATION = "break_a_workstation";
+	private static final String BROKE_WOOD = "break_wood";
+	private static final String HARVESTED_CROPS = "harvest_crops";
+	private static final String HARVESTED_NEAR_FARMER = "harvest_crops_near_a_farmer";
+	private static final String BROKE_STONE = "break_stone";
+	private static final String BROKE_DECORATION = "break_a_decorative_block";
+	private static final String BROKE_BLOCK = "break_a_block";
 	private static final int QUICK_BREAK_TICKS = 40;
 
-	private static final String CHANGED_GAME_MODE = "fhhqxg";
-	private static final String SWITCHED_TO_CREATIVE = "ohtblt";
-	private static final String PLAYER_DIED = "hzjycq";
-	private static final String PLAYER_DIED_AGAIN = "dxcjqn";
-	private static final String PLAYER_DIED_HARDCORE = "elcjbb";
+	private static final String CHANGED_GAME_MODE = "change_gamemode";
+	private static final String SWITCHED_TO_CREATIVE = "switch_to_creative";
+	private static final String PLAYER_DIED = "player_dies";
+	private static final String PLAYER_DIED_AGAIN = "player_dies_again";
+	private static final String PLAYER_DIED_HARDCORE = "player_dies_in_hardcore";
 	private static final int DIED_AGAIN_TICKS = 6000;
-	private static final String GLIDING = "hiuxvo";
-	private static final String FLYING = "lqxmlx";
-	private static final String NEARLY_BROKEN_ITEM = "nwkgqg";
-	private static final String LIT_TNT = "oziqss";
-	private static final String HERO_OF_THE_VILLAGE = "gnetsk";
-	private static final String HERO_OF_THE_VILLAGE_BABY = "fzyrfm";
-	private static final String MANY_EFFECTS = "fqbjfv";
-	private static final String STANDING_STILL = "zsmvzb";
+	private static final String GLIDING = "glide_with_elytra";
+	private static final String FLYING = "fly_in_creative_mode";
+	private static final String NEARLY_BROKEN_ITEM = "hold_a_nearly_broken_item";
+	private static final String LIT_TNT = "light_tnt";
+	private static final String HERO_OF_THE_VILLAGE = "hero_of_the_village";
+	private static final String HERO_OF_THE_VILLAGE_BABY = "see_the_hero_of_the_village";
+	private static final String MANY_EFFECTS = "multiple_status_effects";
+	private static final String STANDING_STILL = "stand_completely_still";
 	private static final int STANDING_STILL_TICKS = 2400;
-	private static final String TRAMPLED_CROPS = "pizztd";
-	private static final String ATE_FOOD = "akerwb";
-	private static final String SHEARED_SHEEP = "edrtbe";
-	private static final String SHEARED_WOOLY = "jqaekk";
-	private static final String USED_LEAD = "elexev";
-	private static final String STARING = "cavwps";
+	private static final String TRAMPLED_CROPS = "trample_crops";
+	private static final String ATE_FOOD = "eat_food";
+	private static final String SHEARED_SHEEP = "shear_a_sheep";
+	private static final String SHEARED_WOOLY = "shear_wooly";
+	private static final String USED_LEAD = "use_a_lead";
+	private static final String STARING = "stare_at_a_villager";
 	private static final double STARE_RANGE = 8;
 	private static final double STARE_CONE = 0.97;
 	private static final int STARE_TICKS = 80;

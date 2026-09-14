@@ -38,11 +38,13 @@ def main():
         trigger, _, reaction = clean(body).partition("Reaction")
         guide[dialog_id] = (clean(title), trigger.replace("Trigger", "", 1).strip(), reaction.strip())
 
+    # Dialogs are keyed by readable name; the guide and the behavior pack use the add-on's ids.
+    name_of = {d["id"]: name for name, d in dialogs.items()}
     java = "\n".join(p.read_text() for p in (ROOT / "src").rglob("*.java"))
     in_java = {d for d in dialogs if f'"{d}"' in java}
     by_sensor = set()
     for entity in ENTITIES.glob("*.json"):
-        by_sensor |= set(re.findall(r"scriptevent oreville_vn:\w+ (\w+)", entity.read_text()))
+        by_sensor |= {name_of.get(i, i) for i in re.findall(r"scriptevent oreville_vn:\w+ (\w+)", entity.read_text())}
     by_sensor &= set(dialogs)
 
     # Conversation parts are reached through their chain: covered once its first line (or its group) is.
@@ -50,7 +52,7 @@ def main():
     groups = set(re.findall(r'GROUP_\w+ = "(\w+)"', java))
     by_chain = set()
     for chain in data.get("conversations", []):
-        if chain[0] in in_java or any(chain[0].startswith(g) for g in groups):
+        if chain[0] in in_java or dialogs.get(chain[0], {}).get("group") in groups:
             by_chain |= set(chain)
     # Hurt voices and death cries are played from sound tables, not as dialogs.
     hurt = set(data.get("hurt_sounds", {}).get("adult", [])) | set(data.get("hurt_sounds", {}).get("baby", []))
@@ -70,7 +72,7 @@ def main():
 
     rows = []
     for dialog_id, dialog in dialogs.items():
-        title, trigger, _ = guide.get(dialog_id, ("", "", ""))
+        title, trigger, _ = guide.get(dialog["id"], ("", "", ""))
         how = ("java" if dialog_id in in_java else "sensor" if dialog_id in by_sensor
                else "chain" if dialog_id in by_chain else "sound" if dialog_id in by_sound else "")
         rows.append((how == "", title or "~", dialog_id, len(dialog["lines"]), how, trigger))

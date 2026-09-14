@@ -4,6 +4,7 @@ import com.javafied.villagernews.ConvertedPack;
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.behavior.BehaviorDefinitions;
 import com.javafied.villagernews.behavior.BehaviorSensors;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -40,7 +41,7 @@ public final class SpecialTrades {
 
 	/** Whether this add-on variant has a trade table of its own in the converted add-on. */
 	public static boolean hasOwnTrades(String variant) {
-		return table(BehaviorSensors.definitions().get(variant)) != null;
+		return table(BehaviorSensors.definitionOfCharacter(variant)) != null;
 	}
 
 	/** Called for new special villagers: they don't work, they sell. */
@@ -99,11 +100,11 @@ public final class SpecialTrades {
 		return new MerchantOffer(cost, second, result, 0, maxUses, xp, multiplier);
 	}
 
-	/** The add-on's items live in this mod's namespace; everything else is vanilla's. */
+	/** The add-on's items live in this mod's namespace, under their readable names; everything else is vanilla's. */
 	private static Item item(String bedrockId) {
 		String[] parts = bedrockId.split(":", 2);
 		Identifier id = parts.length == 2 && !parts[0].equals("minecraft")
-				? VillagerNewsJavafied.id(parts[1]) : Identifier.withDefaultNamespace(parts[parts.length - 1]);
+				? VillagerNewsJavafied.id(AddonNames.nameOf(AddonNames.Kind.ITEM, parts[1])) : Identifier.withDefaultNamespace(parts[parts.length - 1]);
 		return BuiltInRegistries.ITEM.getValue(id);
 	}
 

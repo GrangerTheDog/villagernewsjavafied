@@ -1,6 +1,7 @@
 package com.javafied.villagernews.content;
 
 import com.javafied.villagernews.behavior.BehaviorSensors;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
@@ -30,8 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class SpecialCharacters {
 	/** The Mayor, Testificate Man, Villager #5, Villager #9, the Untouchable Villager, and Wooly (a sheep). */
-	private static final List<String> CHARACTERS = List.of("ilvfra", "poztxf", "vwpagn", "xcrjxf", "ghibss", "mlkxjo");
-	private static final String WOOLY = "mlkxjo";
+	private static final List<String> CHARACTERS = List.of("mayor", "testificate_man", "villager_5", "villager_9", "untouchable", "wooly");
+	private static final String WOOLY = "wooly";
 	private static final double MIN_DISTANCE_FROM_SPAWN = 1000;
 	private static final double MIN_DISTANCE_APART = 150;
 
@@ -43,6 +44,11 @@ public final class SpecialCharacters {
 
 	public static void init() {
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+			// Saved before characters had readable names: "ilvfra" -> "mayor".
+			String variant = entity.getAttached(ModAttachments.VILLAGER_VARIANT);
+			if (variant != null && !variant.equals(AddonNames.nameOf(AddonNames.Kind.CHARACTER, variant))) {
+				entity.setAttached(ModAttachments.VILLAGER_VARIANT, AddonNames.nameOf(AddonNames.Kind.CHARACTER, variant));
+			}
 			if (entity instanceof Villager villager && villager.hasAttached(ModAttachments.FROM_VILLAGE_GENERATION)) {
 				villager.removeAttached(ModAttachments.FROM_VILLAGE_GENERATION);
 				pending.add(villager);
@@ -72,10 +78,10 @@ public final class SpecialCharacters {
 			return; // turned off in the handbook's settings
 		}
 		ServerLevel overworld = level.getServer().overworld();
-		Map<String, String> placed = overworld.getAttachedOrElse(ModAttachments.SPECIAL_CHARACTERS, Map.of());
+		Map<String, String> placed = placed(overworld);
 		List<String> missing = new ArrayList<>();
 		for (String character : CHARACTERS) {
-			if (!placed.containsKey(character) && BehaviorSensors.definitions().get(character) != null) {
+			if (!placed.containsKey(character) && BehaviorSensors.definitionOfCharacter(character) != null) {
 				missing.add(character);
 			}
 		}
@@ -132,9 +138,17 @@ public final class SpecialCharacters {
 		return Math.hypot(pos.getX() - x, pos.getZ() - z);
 	}
 
+	/** Which characters are out in the world, by readable name (older worlds saved the add-on's ids). */
+	private static Map<String, String> placed(ServerLevel overworld) {
+		Map<String, String> placed = new HashMap<>();
+		overworld.getAttachedOrElse(ModAttachments.SPECIAL_CHARACTERS, Map.<String, String>of())
+				.forEach((character, where) -> placed.put(AddonNames.nameOf(AddonNames.Kind.CHARACTER, character), where));
+		return placed;
+	}
+
 	private static void forget(ServerLevel level, Entity entity) {
 		ServerLevel overworld = level.getServer().overworld();
-		Map<String, String> placed = overworld.getAttachedOrElse(ModAttachments.SPECIAL_CHARACTERS, Map.of());
+		Map<String, String> placed = placed(overworld);
 		String uuid = entity.getStringUUID();
 		if (placed.values().stream().anyMatch(v -> v.startsWith(uuid + ","))) {
 			Map<String, String> updated = new HashMap<>(placed);

@@ -82,6 +82,7 @@ public final class AddonConversionManager {
 		}
 		Files.createDirectories(packDir.getParent());
 		ConverterCli.run(addonSource, packDir);
+		com.javafied.villagernews.names.AddonNames.reload();
 	}
 
 	/** Selects the converted pack (if not already) and reloads resources, without requiring manual setup. */

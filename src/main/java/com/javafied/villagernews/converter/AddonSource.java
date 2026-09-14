@@ -21,10 +21,13 @@ import java.util.zip.ZipInputStream;
 public final class AddonSource {
 	public final Path resourcePack;
 	public final Path behaviorPack;
+	/** The add-on's version, from its resource pack's manifest ("1.0.4"); null if it doesn't say. */
+	public final String version;
 
-	private AddonSource(Path resourcePack, Path behaviorPack) {
+	private AddonSource(Path resourcePack, Path behaviorPack, String version) {
 		this.resourcePack = resourcePack;
 		this.behaviorPack = behaviorPack;
+		this.version = version;
 	}
 
 	public static AddonSource locate(Path input, Path stagingDir) throws IOException {
@@ -63,7 +66,20 @@ public final class AddonSource {
 			throw new IOException("Could not find a resource pack (a manifest.json with a 'resources' module) under " + root
 					+ ". Make sure you picked the Villager News .mcaddon (or its extracted folder).");
 		}
-		return new AddonSource(rp, bp);
+		return new AddonSource(rp, bp, version(ConverterUtil.readJson(rp.resolve("manifest.json"))));
+	}
+
+	private static String version(JsonObject manifest) {
+		JsonObject header = manifest.getAsJsonObject("header");
+		if (header == null || !header.has("version")) {
+			return null;
+		}
+		if (header.get("version").isJsonPrimitive()) {
+			return header.get("version").getAsString(); // newer manifests: "1.0.4"
+		}
+		List<String> parts = new ArrayList<>();
+		header.getAsJsonArray("version").forEach(part -> parts.add(part.getAsString()));
+		return String.join(".", parts);
 	}
 
 	private static String firstModuleType(JsonObject manifest) {

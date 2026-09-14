@@ -1,5 +1,7 @@
 package com.javafied.villagernews.converter;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -27,7 +29,7 @@ public final class ItemConverter {
 	private ItemConverter() {
 	}
 
-	public static int convert(Path resourcePack, Path behaviorPack, Path outputAssetsDir) throws IOException {
+	public static int convert(Path resourcePack, Path behaviorPack, Path outputAssetsDir, AddonNames names) throws IOException {
 		if (behaviorPack == null) {
 			return 0;
 		}
@@ -46,7 +48,7 @@ public final class ItemConverter {
 					continue;
 				}
 				String identifier = item.getAsJsonObject("description").get("identifier").getAsString();
-				String path = identifier.substring(identifier.indexOf(':') + 1);
+				String path = readable(names, AddonNames.Kind.ITEM, identifier.substring(identifier.indexOf(':') + 1));
 
 				String iconKey = iconKey(item.getAsJsonObject("components"));
 				if (iconKey == null || !textureData.has(iconKey)) {
@@ -69,7 +71,7 @@ public final class ItemConverter {
 				}
 			}
 		}
-		count += convertSpawnEggs(resourcePack, textureData, outputAssetsDir);
+		count += convertSpawnEggs(resourcePack, textureData, outputAssetsDir, names);
 		return count;
 	}
 
@@ -78,7 +80,7 @@ public final class ItemConverter {
 		return wearable != null && wearable.has("slot") && wearable.get("slot").getAsString().equals("slot.armor.head");
 	}
 
-	private static int convertSpawnEggs(Path resourcePack, JsonObject textureData, Path outputAssetsDir) throws IOException {
+	private static int convertSpawnEggs(Path resourcePack, JsonObject textureData, Path outputAssetsDir, AddonNames names) throws IOException {
 		Path entityDir = resourcePack.resolve("entity");
 		if (!Files.isDirectory(entityDir)) {
 			return 0;
@@ -93,7 +95,7 @@ public final class ItemConverter {
 					continue;
 				}
 				String identifier = description.get("identifier").getAsString();
-				String path = identifier.substring(identifier.indexOf(':') + 1) + "_spawn_egg";
+				String path = readable(names, AddonNames.Kind.CHARACTER, identifier.substring(identifier.indexOf(':') + 1)) + "_spawn_egg";
 				String texturePath = firstString(textureData.getAsJsonObject(egg.get("texture").getAsString()).get("textures"));
 				Path source = texturePath == null ? null : TextureConverter.find(resourcePack, texturePath);
 				if (source == null) {
@@ -162,6 +164,12 @@ public final class ItemConverter {
 				return;
 			}
 		}
+	}
+
+	/** Assets are written under the mod's readable item ids ({@code handbook}, {@code mayor_spawn_egg}). */
+	private static String readable(AddonNames names, AddonNames.Kind kind, String id) {
+		String name = names.name(kind, id);
+		return name != null ? name : id;
 	}
 
 	private static boolean hasAttachable(Path resourcePack, String identifier) throws IOException {

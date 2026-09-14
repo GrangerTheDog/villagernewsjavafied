@@ -22,7 +22,7 @@ import net.minecraft.world.entity.EntityTypes;
 public class VillagerNewsJavafiedClient implements ClientModInitializer {
 	/** The add-on's one sheep reskin. Hand-picked for now; mapping vanilla mobs to reskins from the manifest comes later. */
 	/** The add-on's wandering trader character. */
-	private static final String WANDERING_TRADER_CLIENT_ENTITY = "txczvv";
+	private static final String WANDERING_TRADER_CLIENT_ENTITY = "wandering_trader";
 
 	private boolean promptedThisSession = false;
 

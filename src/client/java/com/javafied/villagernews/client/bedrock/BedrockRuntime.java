@@ -1,6 +1,7 @@
 package com.javafied.villagernews.client.bedrock;
 
 import com.javafied.villagernews.VillagerNewsJavafied;
+import com.javafied.villagernews.behavior.BehaviorProperties;
 import com.javafied.villagernews.client.bedrock.BedrockAnimations.Animation;
 import com.javafied.villagernews.client.bedrock.BedrockAnimations.AnimationRef;
 import com.javafied.villagernews.client.bedrock.BedrockAnimations.BoneAnimation;
@@ -14,6 +15,7 @@ import com.javafied.villagernews.client.bedrock.BedrockDefinitions.RenderControl
 import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.converter.ConverterUtil;
 import com.javafied.villagernews.molang.MolangProgram;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonElement;
 
@@ -134,8 +136,6 @@ public final class BedrockRuntime {
 	private BedrockRuntime() {
 	}
 
-	private static final String STYLE_PROPERTY = "p:pmpece";
-
 	/** Starts a one-shot animation on the entity's model, e.g. the lip sync of a line it's speaking. */
 	public static void playAnimation(Entity entity, String animation) {
 		STATES.computeIfAbsent(entity, e -> new EntityState()).playAnimation(animation);
@@ -181,15 +181,15 @@ public final class BedrockRuntime {
 			return null;
 		}
 		EntityState state = STATES.computeIfAbsent(entity, e -> new EntityState());
-		boolean puppet = ce.identifier().endsWith(":" + VillagerPuppetPort.PUPPET);
+		boolean puppet = ce.identifier().endsWith(":" + VillagerPuppetPort.puppet());
 		Map<String, JsonElement> defaults = defs.properties(ce.identifier());
 		Map<String, Value> overrides = new HashMap<>(puppet ? VillagerPuppetPort.hostDrivenProperties(entity) : Map.of());
 		// Properties the server's port of the add-on changed (what it wears, its nose, ...).
-		entity.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.<String, String>of())
-				.forEach((name, value) -> overrides.putIfAbsent(name, typed(defaults.get(name), value)));
+		BehaviorProperties.readAll(entity).forEach((name, value) -> overrides.putIfAbsent(name, typed(defaults.get(name), value)));
 		// The handbook's "Villager Style", which the add-on sets per player as a property override.
-		if (defaults.containsKey(STYLE_PROPERTY)) {
-			overrides.put(STYLE_PROPERTY, Value.of(com.javafied.villagernews.client.guide.ClientSettings.style()));
+		String style = AddonNames.property("style");
+		if (defaults.containsKey(style)) {
+			overrides.put(style, Value.of(com.javafied.villagernews.client.guide.ClientSettings.style()));
 		}
 		EntityQueries queries = new EntityQueries(entity, partialTick, defaults, overrides);
 		RenderPlan plan = plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,

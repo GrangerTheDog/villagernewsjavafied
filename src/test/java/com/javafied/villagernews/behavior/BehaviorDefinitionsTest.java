@@ -44,7 +44,7 @@ class BehaviorDefinitionsTest {
 		int requested = 0;
 		while (m.find()) {
 			requested++;
-			if (library.get(m.group(1)) == null) {
+			if (library.byAddonId(m.group(1)) == null) {
 				missing.add(m.group(1));
 			}
 		}

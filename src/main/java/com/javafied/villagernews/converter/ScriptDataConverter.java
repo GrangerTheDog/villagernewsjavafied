@@ -1,5 +1,7 @@
 package com.javafied.villagernews.converter;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -29,6 +31,12 @@ import java.util.regex.Pattern;
  *   "hurt_sounds": { "adult": [ "<sound>" ], "baby": [ "<sound>" ] },
  *   "conversations": [ [ "<dialog id>", ... ] ] }   // parts, spoken alternately by two villagers
  * }</pre>
+ *
+ * <p>Dialogs are keyed by readable name ({@link DialogNames}), each keeping
+ * its add-on id ({@code "id"}) and, for the villager conversations about
+ * noses, its group ({@code "group"}); tags and conversation parts use names
+ * too. The script's own property names come from the add-on version's names
+ * file ({@link AddonNames.Kind#SCRIPT_KEY}).
  */
 public final class ScriptDataConverter {
 	/** {@code name=Dialog.<register>({...})}: every dialog the script defines. */
@@ -39,43 +47,115 @@ public final class ScriptDataConverter {
 	/** The two-villager conversation table: {@code [{1:<dialog>,2:<dialog>,..},..]}. */
 	private static final Pattern CONVERSATIONS = Pattern.compile("=(?=\\[\\{1:[A-Za-z_$][\\w$]*,2:[A-Za-z_$][\\w$]*)");
 
-	private static final String LINES = "slhkqn";
-	private static final String SUBTITLES = "aswuwr";
-	private static final String SUBTITLE_TEXT = "ysyeto";
-	private static final String GLOBAL_COOLDOWN = "jqgklx";
-	private static final String ENTITY_COOLDOWN = "csiavd";
-	private static final String COOLDOWN_ANY = "iqirsz";
-	private static final String COOLDOWN_SAME = "didrid";
-	private static final String TAG_GLOBAL = "plgoli";
-	private static final String TAG_ENTITY = "andugb";
+	private final AddonNames names;
+	private final String linesKey;
+	private final String subtitlesKey;
+	private final String subtitleText;
+	private final String globalCooldown;
+	private final String entityCooldown;
+	private final String cooldownAny;
+	private final String cooldownSame;
+	private final String tagGlobal;
+	private final String tagEntity;
 	/** The script's names for "adult" and "baby" entity states. */
-	private static final Map<String, String> STATES = Map.of("jgrldl", "adult", "jiixbx", "baby");
+	private final Map<String, String> states;
 
-	private ScriptDataConverter() {
+	private ScriptDataConverter(AddonNames names) {
+		this.names = names;
+		this.linesKey = key("dialog_lines");
+		this.subtitlesKey = key("line_subtitles");
+		this.subtitleText = key("subtitle_text");
+		this.globalCooldown = key("dialog_global_cooldown");
+		this.entityCooldown = key("dialog_entity_cooldown");
+		this.cooldownAny = key("cooldown_any");
+		this.cooldownSame = key("cooldown_same");
+		this.tagGlobal = key("tag_global");
+		this.tagEntity = key("tag_entity");
+		this.states = Map.of(key("state_adult"), "adult", key("state_baby"), "baby");
+	}
+
+	private String key(String name) {
+		String key = names.id(AddonNames.Kind.SCRIPT_KEY, name);
+		return key != null ? key : name;
 	}
 
 	/** @return how many dialogs were extracted */
-	public static int convert(Path behaviorPack, Path outputDir) throws IOException {
+	public static int convert(Path behaviorPack, Path outputDir, AddonNames names) throws IOException {
 		Path scripts = behaviorPack == null ? null : behaviorPack.resolve("scripts");
-		JsonObject dialogs = new JsonObject();
-		JsonObject hurtSounds = new JsonObject();
-		JsonArray conversations = new JsonArray();
+		JsonObject root = null;
 		if (scripts != null && Files.isDirectory(scripts)) {
 			try (var stream = Files.walk(scripts)) {
 				for (Path file : stream.filter(p -> p.toString().endsWith(".js")).toList()) {
-					extract(Files.readString(file), dialogs, hurtSounds, conversations);
+					JsonObject found = new ScriptDataConverter(names).extract(Files.readString(file));
+					if (root == null || found.getAsJsonObject("dialogs").size() > root.getAsJsonObject("dialogs").size()) {
+						root = found;
+					}
 				}
 			}
+		}
+		if (root == null) {
+			root = new JsonObject();
+			root.add("dialogs", new JsonObject());
+			root.add("hurt_sounds", new JsonObject());
+			root.add("conversations", new JsonArray());
+		}
+		ConverterUtil.writeJson(outputDir.resolve("server").resolve("dialogs.json"), root);
+		return root.getAsJsonObject("dialogs").size();
+	}
+
+	/** Everything the script holds, with dialogs under readable names. */
+	JsonObject extract(String script) {
+		JsonObject byId = new JsonObject();
+		JsonObject hurtSounds = new JsonObject();
+		JsonArray conversationsById = new JsonArray();
+		extract(script, byId, hurtSounds, conversationsById);
+
+		List<List<String>> chains = new java.util.ArrayList<>();
+		conversationsById.forEach(c -> {
+			List<String> chain = new java.util.ArrayList<>();
+			c.getAsJsonArray().forEach(part -> chain.add(part.getAsString()));
+			chains.add(chain);
+		});
+		List<String> unnamed = new java.util.ArrayList<>();
+		Map<String, String> dialogNames = DialogNames.assign(script, byId.keySet(), chains, names, unnamed);
+		if (!unnamed.isEmpty()) {
+			System.out.println("Dialogs without a readable name (add them to the names file): " + unnamed);
+		}
+
+		JsonObject dialogs = new JsonObject();
+		for (Map.Entry<String, JsonElement> dialog : byId.entrySet()) {
+			JsonObject named = new JsonObject();
+			named.addProperty("id", dialog.getKey());
+			for (Map.Entry<String, String> group : names.all(AddonNames.Kind.DIALOG_GROUP).entrySet()) {
+				if (dialog.getKey().startsWith(group.getValue())) {
+					named.addProperty("group", group.getKey());
+				}
+			}
+			dialog.getValue().getAsJsonObject().entrySet().forEach(e -> named.add(e.getKey(), e.getValue()));
+			if (named.has("tags")) {
+				JsonObject tags = new JsonObject();
+				named.getAsJsonObject("tags").entrySet().forEach(t -> {
+					String tag = names.name(AddonNames.Kind.DIALOG_TAG, t.getKey());
+					tags.add(tag != null ? tag : t.getKey(), t.getValue());
+				});
+				named.add("tags", tags);
+			}
+			dialogs.add(dialogNames.get(dialog.getKey()), named);
+		}
+		JsonArray conversations = new JsonArray();
+		for (List<String> chain : chains) {
+			JsonArray named = new JsonArray();
+			chain.forEach(id -> named.add(dialogNames.getOrDefault(id, id)));
+			conversations.add(named);
 		}
 		JsonObject root = new JsonObject();
 		root.add("dialogs", dialogs);
 		root.add("hurt_sounds", hurtSounds);
 		root.add("conversations", conversations);
-		ConverterUtil.writeJson(outputDir.resolve("server").resolve("dialogs.json"), root);
-		return dialogs.size();
+		return root;
 	}
 
-	static void extract(String script, JsonObject dialogsOut, JsonObject hurtSoundsOut, JsonArray conversationsOut) {
+	void extract(String script, JsonObject dialogsOut, JsonObject hurtSoundsOut, JsonArray conversationsOut) {
 		JsLiteral js = new JsLiteral(script);
 		// A dialog referenced from inside a literal (e.g. a table of dialogs) resolves to its id.
 		Map<String, String> dialogVariables = new java.util.HashMap<>();
@@ -102,7 +182,7 @@ public final class ScriptDataConverter {
 				for (JsonElement entry : state.getValue().getAsJsonArray()) {
 					sounds.add(entry.getAsJsonObject().get("soundId"));
 				}
-				hurtSoundsOut.add(STATES.getOrDefault(state.getKey(), state.getKey()), sounds);
+				hurtSoundsOut.add(states.getOrDefault(state.getKey(), state.getKey()), sounds);
 			}
 		}
 
@@ -120,10 +200,10 @@ public final class ScriptDataConverter {
 		}
 	}
 
-	private static JsonObject dialog(JsonObject raw) {
+	private JsonObject dialog(JsonObject raw) {
 		JsonObject out = new JsonObject();
 		JsonArray lines = new JsonArray();
-		for (JsonElement element : raw.getAsJsonArray(LINES)) {
+		for (JsonElement element : raw.getAsJsonArray(linesKey)) {
 			JsonObject line = element.getAsJsonObject();
 			JsonObject outLine = new JsonObject();
 			outLine.add("animation", line.get("animationName"));
@@ -131,14 +211,14 @@ public final class ScriptDataConverter {
 			outLine.add("duration", line.get("duration"));
 			outLine.addProperty("weight", line.has("weight") ? line.get("weight").getAsDouble() : 1);
 			JsonArray subtitles = new JsonArray();
-			if (line.has(SUBTITLES)) {
-				List<Map.Entry<String, JsonElement>> timed = line.getAsJsonObject(SUBTITLES).entrySet().stream()
+			if (line.has(subtitlesKey)) {
+				List<Map.Entry<String, JsonElement>> timed = line.getAsJsonObject(subtitlesKey).entrySet().stream()
 						.sorted((a, b) -> Double.compare(Double.parseDouble(a.getKey()), Double.parseDouble(b.getKey())))
 						.toList();
 				for (Map.Entry<String, JsonElement> entry : timed) {
 					JsonObject subtitle = new JsonObject();
 					subtitle.addProperty("time", Double.parseDouble(entry.getKey()));
-					subtitle.add("text", entry.getValue().getAsJsonObject().get(SUBTITLE_TEXT));
+					subtitle.add("text", entry.getValue().getAsJsonObject().get(subtitleText));
 					subtitles.add(subtitle);
 				}
 			}
@@ -146,18 +226,18 @@ public final class ScriptDataConverter {
 			lines.add(outLine);
 		}
 		out.add("lines", lines);
-		cooldown(raw, GLOBAL_COOLDOWN, "global_cooldown", out);
-		cooldown(raw, ENTITY_COOLDOWN, "entity_cooldown", out);
+		cooldown(raw, globalCooldown, "global_cooldown", out);
+		cooldown(raw, entityCooldown, "entity_cooldown", out);
 		if (raw.has("tags")) {
 			JsonObject tags = new JsonObject();
 			for (Map.Entry<String, JsonElement> tag : raw.getAsJsonObject("tags").entrySet()) {
 				JsonObject in = tag.getValue().getAsJsonObject();
 				JsonObject t = new JsonObject();
-				if (in.has(TAG_GLOBAL)) {
-					t.add("global", in.get(TAG_GLOBAL));
+				if (in.has(tagGlobal)) {
+					t.add("global", in.get(tagGlobal));
 				}
-				if (in.has(TAG_ENTITY)) {
-					t.add("entity", in.get(TAG_ENTITY));
+				if (in.has(tagEntity)) {
+					t.add("entity", in.get(tagEntity));
 				}
 				tags.add(tag.getKey(), t);
 			}
@@ -166,17 +246,17 @@ public final class ScriptDataConverter {
 		return out;
 	}
 
-	private static void cooldown(JsonObject raw, String key, String outKey, JsonObject out) {
+	private void cooldown(JsonObject raw, String key, String outKey, JsonObject out) {
 		if (!raw.has(key)) {
 			return;
 		}
 		JsonObject in = raw.getAsJsonObject(key);
 		JsonObject c = new JsonObject();
-		if (in.has(COOLDOWN_ANY)) {
-			c.add("any", in.get(COOLDOWN_ANY));
+		if (in.has(cooldownAny)) {
+			c.add("any", in.get(cooldownAny));
 		}
-		if (in.has(COOLDOWN_SAME)) {
-			c.add("same", in.get(COOLDOWN_SAME));
+		if (in.has(cooldownSame)) {
+			c.add("same", in.get(cooldownSame));
 		}
 		out.add(outKey, c);
 	}

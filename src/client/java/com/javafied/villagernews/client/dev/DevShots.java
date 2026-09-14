@@ -4,6 +4,7 @@ import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.client.guide.GuideBook;
 import com.javafied.villagernews.client.guide.GuideScreen;
 import com.javafied.villagernews.content.ModItems;
+import com.javafied.villagernews.names.AddonNames;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -61,9 +62,9 @@ public final class DevShots {
 			guide = new GuideScreen(book);
 			Minecraft.getInstance().setScreenAndShow(guide);
 		})));
-		page("guide-menu", "sxjosu");
-		page("guide-overview", "xrcvxx");
-		page("guide-triggers", "ynokwd");
+		page("guide-menu", "guide");
+		page("guide-overview", "overview");
+		page("guide-triggers", "triggers");
 		steps.add(new Step("guide-search", () -> guide.search("shear")));
 		page("guide-settings", "settings");
 		steps.add(new Step("done", () -> Minecraft.getInstance().stop()));
@@ -92,7 +93,8 @@ public final class DevShots {
 	private static void page(String name, String page) {
 		steps.add(new Step(name, () -> {
 			if (guide != null) {
-				guide.openPage(page);
+				String id = AddonNames.current().id(AddonNames.Kind.GUIDE_PAGE, page);
+				guide.openPage(id != null ? id : page);
 			}
 		}));
 	}

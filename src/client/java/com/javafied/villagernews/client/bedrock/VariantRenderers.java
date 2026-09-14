@@ -23,7 +23,7 @@ import java.util.Set;
  */
 public final class VariantRenderers {
 	/** Per vanilla type: the add-on variants drawn with the add-on's model. */
-	private static final Map<EntityType<?>, Set<String>> VARIANTS = Map.of(EntityTypes.SHEEP, Set.of("mlkxjo"));
+	private static final Map<EntityType<?>, Set<String>> VARIANTS = Map.of(EntityTypes.SHEEP, Set.of("wooly"));
 
 	private static Map<EntityType<?>, EntityRenderer<?, ?>> renderers = Map.of();
 

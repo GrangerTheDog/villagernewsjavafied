@@ -61,84 +61,84 @@ public final class NoticeReactions {
 	private static final Map<String, Remark> BABY_MOBS = new HashMap<>();
 
 	static {
-		String[][] adults = {{"allay", "rnlher"}, {"armor_stand", "ckniqq"}, {"bat", "ozmthf"}, {"bogged", "nsosix"},
-				{"camel", "turlrl"}, {"cat", "ynxhfb"}, {"cave_spider", "gtmfpl"}, {"cod", "trkugw"}, {"copper_golem", "ktdshy"},
-				{"cow", "lvzfcv"}, {"creaking", "nwlcij"}, {"creeper", "odwhzm"}, {"dolphin", "aqtshb"}, {"drowned", "atwycp"},
-				{"ender_dragon", "xxjkmo"}, {"enderman", "yeqxvm"}, {"frog", "pguaqp"}, {"happy_ghast", "lxvofx"},
-				{"horse", "yazvzs"}, {"husk", "gcoysc"}, {"llama", "ysbfqu"}, {"panda", "swewsr"}, {"parrot", "vapupl"},
-				{"phantom", "nwzvkb"}, {"pig", "jqdeef"}, {"polar_bear", "toolzx"}, {"pufferfish", "trkugw"},
-				{"rabbit", "spfefr"}, {"salmon", "trkugw"}, {"skeleton", "lqzdqk"}, {"slime", "rzvitn"}, {"sniffer", "tqishj"},
-				{"snow_golem", "kxjegd"}, {"spider", "gtmfpl"}, {"stray", "bxbibd"}, {"sulfur_cube", "dmcjmd"},
-				{"trader_llama", "ysbfqu"}, {"tropical_fish", "trkugw"}, {"turtle", "neoxpu"}, {"warden", "jicosq"},
-				{"witch", "lwcrnt"}, {"wither", "satsrf"}, {"zombified_piglin", "wboncy"}, {"zombie_villager", "xtooxu"}};
+		String[][] adults = {{"allay", "allay"}, {"armor_stand", "place_an_armor_stand"}, {"bat", "bat"}, {"bogged", "bogged"},
+				{"camel", "camel"}, {"cat", "cat"}, {"cave_spider", "spider"}, {"cod", "fish"}, {"copper_golem", "copper_golem"},
+				{"cow", "cow"}, {"creaking", "creaking"}, {"creeper", "creeper"}, {"dolphin", "dolphin"}, {"drowned", "drowned"},
+				{"ender_dragon", "ender_dragon"}, {"enderman", "enderman"}, {"frog", "frog"}, {"happy_ghast", "happy_ghast"},
+				{"horse", "horse"}, {"husk", "husk"}, {"llama", "llama"}, {"panda", "panda"}, {"parrot", "parrot"},
+				{"phantom", "phantom"}, {"pig", "pig"}, {"polar_bear", "polar_bear"}, {"pufferfish", "fish"},
+				{"rabbit", "rabbit"}, {"salmon", "fish"}, {"skeleton", "skeleton"}, {"slime", "slime"}, {"sniffer", "sniffer"},
+				{"snow_golem", "snow_golem"}, {"spider", "spider"}, {"stray", "stray"}, {"sulfur_cube", "sulfur_cube"},
+				{"trader_llama", "llama"}, {"tropical_fish", "fish"}, {"turtle", "turtle"}, {"warden", "warden"},
+				{"witch", "witch_nearby"}, {"wither", "wither"}, {"zombified_piglin", "zombie_piglin"}, {"zombie_villager", "zombie_villager"}};
 		for (String[] entry : adults) {
 			MOBS.put(entry[0], Remark.adult(entry[1]));
 		}
-		MOBS.put("iron_golem", new Remark("cuchwi", "mqnapy"));
-		String[][] babies = {{"cat", "knjdbi"}, {"cow", "hzahog"}, {"drowned", "vakwgb"}, {"horse", "ualabt"},
-				{"husk", "hwltxk"}, {"panda", "gggzar"}, {"pig", "htibul"}, {"zombified_piglin", "qltnkz"},
-				{"zombie_villager", "nstwos"}};
+		MOBS.put("iron_golem", new Remark("iron_golem", "see_an_iron_golem"));
+		String[][] babies = {{"cat", "baby_cat"}, {"cow", "baby_cow"}, {"drowned", "baby_drowned"}, {"horse", "baby_horse"},
+				{"husk", "baby_husk"}, {"panda", "baby_panda"}, {"pig", "baby_pig"}, {"zombified_piglin", "baby_zombie_piglin"},
+				{"zombie_villager", "baby_zombie_villager"}};
 		for (String[] entry : babies) {
 			BABY_MOBS.put(entry[0], Remark.adult(entry[1]));
 		}
 	}
 
 	/** Meeting the special characters. (The add-on files the Mayor's under a slot it never reads; restored.) */
-	private static final Map<Kind, String> MEET_CHARACTER = Map.of(Kind.TESTIFICATE_MAN, "zvamyb", Kind.MAYOR, "lyatyf",
-			Kind.NUMBER_5, "kmvqxe", Kind.NUMBER_9, "sifqsj");
-	private static final String ANGRY_BEE = "bmimxe";
-	private static final String BABY_BEE = "qqtnlm";
-	private static final String BEE = "rbkjsr";
-	private static final String TAMED_BABY_WOLF = "sxikgq";
-	private static final String TAMED_WOLF = "aqxgxh";
-	private static final String BABY_WOLF = "hyzwpr";
-	private static final String WOLF = "vvntcf";
-	private static final String SHEARED_SHEEP = "afxbav";
-	private static final String BABY_SHEEP = "eccdga";
-	private static final String SHEEP = "vxycol";
-	private static final String BABY_ZOMBIE = "zvwapr";
-	private static final String ZOMBIE = "dortcb";
-	private static final String JOCKEY = "dxeaal";
-	private static final String BABY_CHICKEN = "pjcwec";
-	private static final String CHICKEN = "hggexx";
-	private static final String VILLAGER_IN_TESTIFICATE_HELMET = "pbbywc";
-	private static final String VILLAGER_IN_COSMETIC = "anrhns";
-	private static final String ITEM_PILE = "zywcju";
-	private static final String BABY_VILLAGER = "pbmrxx";
-	private static final String UNKNOWN_MOB = "gjtuqd";
-	private static final String CROWD = "kzemrz";
+	private static final Map<Kind, String> MEET_CHARACTER = Map.of(Kind.TESTIFICATE_MAN, "meet_testificate_man", Kind.MAYOR, "meet_the_mayor",
+			Kind.NUMBER_5, "meet_villager_5", Kind.NUMBER_9, "meet_villager_9");
+	private static final String ANGRY_BEE = "angry_bee";
+	private static final String BABY_BEE = "baby_bee";
+	private static final String BEE = "bee";
+	private static final String TAMED_BABY_WOLF = "tamed_baby_wolf";
+	private static final String TAMED_WOLF = "tamed_wolf";
+	private static final String BABY_WOLF = "baby_wolf";
+	private static final String WOLF = "wolf";
+	private static final String SHEARED_SHEEP = "sheared_sheep";
+	private static final String BABY_SHEEP = "baby_sheep";
+	private static final String SHEEP = "sheep";
+	private static final String BABY_ZOMBIE = "baby_zombie";
+	private static final String ZOMBIE = "zombie_nearby";
+	private static final String JOCKEY = "jockey";
+	private static final String BABY_CHICKEN = "baby_chicken";
+	private static final String CHICKEN = "chicken";
+	private static final String VILLAGER_IN_TESTIFICATE_HELMET = "villager_wears_testificate_mans_helmet";
+	private static final String VILLAGER_IN_COSMETIC = "see_a_villager_wearing_a_cosmetic";
+	private static final String DROPPED_ITEMS = "see_a_pile_of_dropped_items";
+	private static final String BABY_VILLAGER = "see_a_baby_villager";
+	private static final String UNKNOWN_MOB = "see_an_unknown_mob";
+	private static final String CROWD = "crowd_too_many_villagers_together";
 
 	// Greeting players who look at a villager, by reputation band (adult line / baby line).
-	private static final String REPUTATION_EXTREMELY_HIGH = "kcbenk";
-	private static final String REPUTATION_HIGH = "omgcte";
-	private static final String APPROACHED = "xfpjxq";
-	private static final String REPUTATION_LOW = "tfzlsw";
-	private static final String REPUTATION_EXTREMELY_LOW = "zstdjn";
-	private static final String REPUTATION_EXTREMELY_LOW_ARMED = "stuirs";
-	private static final String BABY_MEETS_PLAYER = "wtuguc";
-	private static final String BABY_MEETS_DISLIKED_PLAYER = "jfuftm";
+	private static final String REPUTATION_EXTREMELY_HIGH = "extremely_high_reputation";
+	private static final String REPUTATION_HIGH = "high_reputation";
+	private static final String APPROACHED = "approach_a_villager";
+	private static final String REPUTATION_LOW = "low_reputation";
+	private static final String REPUTATION_EXTREMELY_LOW = "extremely_low_reputation";
+	private static final String REPUTATION_EXTREMELY_LOW_ARMED = "extremely_low_reputation_with_a_sword";
+	private static final String BABY_MEETS_PLAYER = "meet_a_player";
+	private static final String BABY_MEETS_DISLIKED_PLAYER = "see_a_player_with_a_bad_reputation";
 	/** Real-world calendar greetings. (The add-on's weekday and date keys were mangled by its minifier; restored.) */
-	private static final Map<DayOfWeek, String> WEEKDAY_GREETING = Map.of(DayOfWeek.SUNDAY, "zckxrc",
-			DayOfWeek.MONDAY, "jpucos", DayOfWeek.TUESDAY, "lgeeem", DayOfWeek.WEDNESDAY, "qiqiez",
-			DayOfWeek.THURSDAY, "caiyte", DayOfWeek.FRIDAY, "cxtvsx", DayOfWeek.SATURDAY, "lfhnxz");
-	private static final String WEEKEND_GREETING = "ckngck";
-	private static final String TOP_OF_THE_HOUR = "jqgkhy";
-	private static final String FRIDAY_13TH = "qfcwvz";
-	private static final Map<String, String> HOLIDAY_GREETING = Map.of("1-1", "uyqiwv", "2-14", "fabiyx", "5-17", "iriuqa",
-			"10-31", "adhxce", "12-24", "zoqxvy", "12-25", "rclyrl");
-	private static final String MORNING = "zkoewx";
-	private static final String AFTERNOON = "kopthx";
-	private static final String EVENING = "qknpqr";
-	private static final String NIGHT = "sotbtt";
+	private static final Map<DayOfWeek, String> WEEKDAY_GREETING = Map.of(DayOfWeek.SUNDAY, "sunday",
+			DayOfWeek.MONDAY, "monday", DayOfWeek.TUESDAY, "tuesday", DayOfWeek.WEDNESDAY, "wednesday",
+			DayOfWeek.THURSDAY, "thursday", DayOfWeek.FRIDAY, "friday", DayOfWeek.SATURDAY, "saturday");
+	private static final String WEEKEND_GREETING = "weekend";
+	private static final String TOP_OF_THE_HOUR = "top_of_the_hour";
+	private static final String FRIDAY_13TH = "friday_the_13th";
+	private static final Map<String, String> HOLIDAY_GREETING = Map.of("1-1", "new_years_day", "2-14", "valentines_day", "5-17", "minecrafts_birthday",
+			"10-31", "halloween", "12-24", "christmas_eve", "12-25", "christmas_day");
+	private static final String MORNING = "morning";
+	private static final String AFTERNOON = "afternoon";
+	private static final String EVENING = "evening";
+	private static final String NIGHT = "night";
 	// The special characters greeting a player.
-	private static final String MAYOR_GREETS = "dpwhhs";
-	private static final String MAYOR_SEES_HIS_HAT = "cmkesu";
-	private static final String WOOLY_GREETS = "uvtocs";
-	private static final String TESTIFICATE_GREETS = "nmwmrz";
-	private static final String TESTIFICATE_SEES_HIS_HELMET = "rooiup";
-	private static final String NUMBER_5_GREETS = "xccwah";
-	private static final String NUMBER_5_SEES_HIS_MOUSTACHE = "mjyhgw";
-	private static final String NUMBER_9_GREETS = "kzogzi";
+	private static final String MAYOR_GREETS = "mayor_greets";
+	private static final String MAYOR_SEES_HIS_HAT = "player_wears_the_mayor_hat";
+	private static final String WOOLY_GREETS = "wooly_greets";
+	private static final String TESTIFICATE_GREETS = "testificate_man_greets";
+	private static final String TESTIFICATE_SEES_HIS_HELMET = "player_wears_testificate_mans_helmet";
+	private static final String NUMBER_5_GREETS = "villager_5_greets";
+	private static final String NUMBER_5_SEES_HIS_MOUSTACHE = "player_wears_villager_5s_moustache";
+	private static final String NUMBER_9_GREETS = "villager_9_greets";
 
 	private static final int INTERVAL = 60;
 	private static final double NEAR = 5;
@@ -265,10 +265,10 @@ public final class NoticeReactions {
 			return null;
 		}
 		return switch (kind) {
-			case MAYOR -> new Remark(null, wears(player, "cryhjc") ? MAYOR_SEES_HIS_HAT : MAYOR_GREETS);
+			case MAYOR -> new Remark(null, wears(player, "mayor_hat") ? MAYOR_SEES_HIS_HAT : MAYOR_GREETS);
 			case WOOLY -> Remark.adult(WOOLY_GREETS);
-			case TESTIFICATE_MAN -> Remark.adult(wears(player, "ufernq") ? TESTIFICATE_SEES_HIS_HELMET : TESTIFICATE_GREETS);
-			case NUMBER_5 -> Remark.adult(wears(player, "odplew") ? NUMBER_5_SEES_HIS_MOUSTACHE : NUMBER_5_GREETS);
+			case TESTIFICATE_MAN -> Remark.adult(wears(player, "testificate_man_helmet") ? TESTIFICATE_SEES_HIS_HELMET : TESTIFICATE_GREETS);
+			case NUMBER_5 -> Remark.adult(wears(player, "moustache") ? NUMBER_5_SEES_HIS_MOUSTACHE : NUMBER_5_GREETS);
 			case NUMBER_9 -> Remark.adult(NUMBER_9_GREETS);
 			case VILLAGER -> villagerGreeting((Villager) speaker, player);
 			default -> null;
@@ -343,8 +343,11 @@ public final class NoticeReactions {
 			return meet == null ? null : Remark.adult(meet);
 		}
 		if (targetKind == Kind.VILLAGER) {
-			String accessory = target.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.of()).getOrDefault("p:mlxeez", "none");
-			if (speakerKind == Kind.TESTIFICATE_MAN && accessory.equals("ufernq")) {
+			String worn = com.javafied.villagernews.behavior.BehaviorProperties.read(target,
+					com.javafied.villagernews.names.AddonNames.property("accessory"));
+			String accessory = worn == null ? "none" : com.javafied.villagernews.names.AddonNames.nameOf(
+					com.javafied.villagernews.names.AddonNames.Kind.ITEM, worn);
+			if (speakerKind == Kind.TESTIFICATE_MAN && accessory.equals("testificate_man_helmet")) {
 				return Remark.adult(VILLAGER_IN_TESTIFICATE_HELMET);
 			}
 			if (!accessory.equals("none")) {
@@ -377,7 +380,7 @@ public final class NoticeReactions {
 		}
 		if (target instanceof ItemEntity) {
 			return target.level().getEntitiesOfClass(ItemEntity.class, target.getBoundingBox().inflate(5),
-					item -> item.distanceTo(target) <= 5).size() >= 5 ? Remark.adult(ITEM_PILE) : null;
+					item -> item.distanceTo(target) <= 5).size() >= 5 ? Remark.adult(DROPPED_ITEMS) : null;
 		}
 		return baby ? Remark.adult(BABY_VILLAGER) : null;
 	}

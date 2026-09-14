@@ -25,21 +25,21 @@ import java.util.concurrent.ThreadLocalRandom;
  * long while complains it can't reach it.
  */
 public final class WorkReactions {
-	private static final String START_WORK = "qawras";
-	private static final Map<String, String> AT_WORK = Map.ofEntries(Map.entry("armorer", "djpksc"),
-			Map.entry("butcher", "ueczyh"), Map.entry("cartographer", "wuoloh"), Map.entry("cleric", "hkowex"),
-			Map.entry("farmer", "umdvtb"), Map.entry("fisherman", "tgggoh"), Map.entry("fletcher", "fzjope"),
-			Map.entry("librarian", "fezzjw"), Map.entry("leatherworker", "ljewqf"), Map.entry("mason", "yldlzt"),
-			Map.entry("shepherd", "opxfuo"), Map.entry("toolsmith", "ivktls"), Map.entry("weaponsmith", "ccpvqj"));
+	private static final String START_WORK = "start_work";
+	private static final Map<String, String> AT_WORK = Map.ofEntries(Map.entry("armorer", "armorer_at_work"),
+			Map.entry("butcher", "butcher_at_work"), Map.entry("cartographer", "cartographer_at_work"), Map.entry("cleric", "cleric_at_work"),
+			Map.entry("farmer", "farmer_at_work"), Map.entry("fisherman", "fisherman_at_work"), Map.entry("fletcher", "fletcher_at_work"),
+			Map.entry("librarian", "librarian_at_work"), Map.entry("leatherworker", "leatherworker_at_work"), Map.entry("mason", "mason_at_work"),
+			Map.entry("shepherd", "shepherd_at_work"), Map.entry("toolsmith", "toolsmith_at_work"), Map.entry("weaponsmith", "weaponsmith_at_work"));
 	private static final Map<String, String> BLOCK_WORKSTATION = Map.ofEntries(Map.entry("armorer", "blast_furnace"),
 			Map.entry("butcher", "smoker"), Map.entry("cartographer", "cartography_table"), Map.entry("cleric", "brewing_stand"),
 			Map.entry("farmer", "composter"), Map.entry("fisherman", "barrel"), Map.entry("fletcher", "fletching_table"),
 			Map.entry("librarian", "lectern"), Map.entry("leatherworker", "cauldron"), Map.entry("mason", "stonecutter"),
 			Map.entry("shepherd", "loom"), Map.entry("toolsmith", "smithing_table"), Map.entry("weaponsmith", "grindstone"));
-	private static final String NEAR_WORKSTATION = "sdhkke";
-	private static final String CANNOT_REACH_WORKSTATION = "ywzhwz";
-	private static final String BROWSES_BOOKSHELF = "tdvtmn";
-	private static final String FARMING = "aobqjt";
+	private static final String NEAR_WORKSTATION = "stand_near_a_workstation";
+	private static final String CANNOT_REACH_WORKSTATION = "cannot_reach_workstation";
+	private static final String BROWSES_BOOKSHELF = "inspect_bookshelves";
+	private static final String FARMING = "farming";
 	private static final int SINCE_WORKSTATION_TICKS = 12000;
 	private static final int SINCE_CANNOT_REACH_TICKS = 2400;
 	private static final int FARMING_MEMORY_TICKS = 160;

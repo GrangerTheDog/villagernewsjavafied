@@ -1,5 +1,7 @@
 package com.javafied.villagernews.behavior;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -11,10 +13,15 @@ import net.minecraft.world.entity.LivingEntity;
  * values are simply computed from it.
  */
 public final class PuppetHost {
-	/** {@code p:fsjsbp}: sleeping, on ground, in water and vehicle packed as decimal digits. */
-	public static final String PACKED_STATE = "p:fsjsbp";
-	/** {@code p:enczhb}: the vehicle, see {@link #vehicleIndex}. */
-	public static final String VEHICLE = "p:enczhb";
+	/** The {@code packed_state} property: sleeping, on ground, in water and vehicle packed as decimal digits. */
+	public static String packedStateProperty() {
+		return AddonNames.property("packed_state");
+	}
+
+	/** The {@code vehicle} property, see {@link #vehicleIndex}. */
+	public static String vehicleProperty() {
+		return AddonNames.property("vehicle");
+	}
 
 	private PuppetHost() {
 	}

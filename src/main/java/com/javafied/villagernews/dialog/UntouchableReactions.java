@@ -42,9 +42,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * (a panicking villager's too) need it on the client.
  */
 public final class UntouchableReactions {
-	private static final String TAUNT = "eltxge";
+	private static final String TAUNT = "try_to_reach_the_untouchable_villager";
 	/** Which pose it strikes (0 none, 1-5 by the player's side). */
-	private static final String POSE = "p:ihxrtl";
+	private static final String PROPERTY_POSE = "dodge_pose";
 	private static final double FLEE_RANGE = 16;
 	private static final double POSE_RANGE = 12;
 	private static final double VANISH_RANGE = 4;
@@ -175,8 +175,8 @@ public final class UntouchableReactions {
 			return;
 		}
 		BehaviorProperties properties = new BehaviorProperties(villager, definition);
-		if (!(properties.get(POSE) instanceof Double current) || current.intValue() != pose) {
-			properties.set(POSE, new JsonPrimitive(pose));
+		if (!(properties.named(PROPERTY_POSE) instanceof Double current) || current.intValue() != pose) {
+			properties.setNamed(PROPERTY_POSE, new JsonPrimitive(pose));
 		}
 	}
 

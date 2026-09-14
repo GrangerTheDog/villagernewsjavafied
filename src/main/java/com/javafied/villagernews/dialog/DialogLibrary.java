@@ -17,7 +17,8 @@ import java.util.Map;
  * The add-on's voice lines, as the converter extracted them from its script
  * ({@code server/dialogs.json}). A {@link Dialog} is one reaction - "greet a
  * player", "complain about being pushed" - with several interchangeable
- * {@link Line}s, one of which is spoken each time.
+ * {@link Line}s, one of which is spoken each time. Dialogs go by readable
+ * names ({@code start_work}), each keeping the add-on's own id.
  */
 public final class DialogLibrary {
 	public static final DialogLibrary EMPTY = new DialogLibrary(Map.of(), List.of(), List.of(), List.of());
@@ -44,8 +45,13 @@ public final class DialogLibrary {
 		}
 	}
 
-	public record Dialog(String id, List<Line> lines, Cooldown globalCooldown, Cooldown entityCooldown,
-			Map<String, TagCooldown> tags) {
+	/**
+	 * @param id      readable name ({@code start_work})
+	 * @param addonId the add-on's id for it ({@code qawras})
+	 * @param group   for the villagers' conversations about noses, which ones ({@code both_noses}); else null
+	 */
+	public record Dialog(String id, String addonId, String group, List<Line> lines, Cooldown globalCooldown,
+			Cooldown entityCooldown, Map<String, TagCooldown> tags) {
 	}
 
 	/**
@@ -69,6 +75,8 @@ public final class DialogLibrary {
 		this.babyHurtSounds = babyHurtSounds;
 		this.conversations = conversations;
 	}
+
+	private volatile Map<String, Dialog> byAddonId;
 
 	/** {@link #EMPTY} if the file doesn't exist (add-on not converted yet). */
 	public static DialogLibrary load(Path file) throws IOException {
@@ -99,8 +107,24 @@ public final class DialogLibrary {
 		return new DialogLibrary(Map.copyOf(dialogs), strings(hurt, "adult"), strings(hurt, "baby"), List.copyOf(conversations));
 	}
 
-	public Dialog get(String id) {
-		return dialogs.get(id);
+	/** By readable name. */
+	public Dialog get(String name) {
+		return dialogs.get(name);
+	}
+
+	/** The dialog with this add-on id (as the behavior pack's script events name them), or null. */
+	public Dialog byAddonId(String addonId) {
+		if (byAddonId == null) {
+			Map<String, Dialog> index = new java.util.HashMap<>();
+			dialogs.values().forEach(d -> index.put(d.addonId(), d));
+			byAddonId = index;
+		}
+		return byAddonId.get(addonId);
+	}
+
+	/** Every dialog, by readable name. */
+	public java.util.Collection<Dialog> all() {
+		return dialogs.values();
 	}
 
 	public boolean isEmpty() {
@@ -141,7 +165,9 @@ public final class DialogLibrary {
 						number(t, "entity", DEFAULT_TAG.entity())));
 			}
 		}
-		return new Dialog(id, List.copyOf(lines), cooldown(json.getAsJsonObject("global_cooldown"), DEFAULT_GLOBAL),
+		String addonId = json.has("id") ? json.get("id").getAsString() : id;
+		String group = json.has("group") ? json.get("group").getAsString() : null;
+		return new Dialog(id, addonId, group, List.copyOf(lines), cooldown(json.getAsJsonObject("global_cooldown"), DEFAULT_GLOBAL),
 				cooldown(json.getAsJsonObject("entity_cooldown"), DEFAULT_ENTITY), Map.copyOf(tags));
 	}
 
