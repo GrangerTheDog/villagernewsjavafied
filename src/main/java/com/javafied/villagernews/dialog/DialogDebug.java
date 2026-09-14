@@ -5,7 +5,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /**
  * {@code /villagernews debug}: for players who turn it on, an overlay about
- * the villager they look at - what it's saying, its cooldowns, what it's
+ * the villager (or trader, or Wooly) they look at - what it's saying, its cooldowns, what it's
  * waiting to say, and why its last reaction didn't happen.
  */
 public final class DialogDebug {
@@ -53,27 +53,28 @@ public final class DialogDebug {
 				watching.remove(id);
 				continue;
 			}
-			Villager villager = lookedAt(player);
+			LivingEntity speaker = lookedAt(player);
 			List<String> lines = new ArrayList<>();
-			if (villager != null) {
-				lines.add(villager.getName().getString() + " (" + villager.getAttachedOrElse(
-						com.javafied.villagernews.content.ModAttachments.VILLAGER_VARIANT, "villager") + ")");
-				lines.addAll(engine.describe(villager));
+			if (speaker != null) {
+				lines.add(speaker.getName().getString() + " (" + Speakers.kindOf(speaker).name().toLowerCase(java.util.Locale.ROOT) + ")");
+				lines.addAll(engine.describe(speaker));
 			}
 			ServerPlayNetworking.send(player, new DialogPayloads.Debug(lines));
 		}
 	}
 
-	private static Villager lookedAt(ServerPlayer player) {
+	/** The one who could speak (a villager, the trader, Wooly) nearest the middle of the view. */
+	private static LivingEntity lookedAt(ServerPlayer player) {
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle();
-		Villager best = null;
+		LivingEntity best = null;
 		double bestDot = LOOK_CONE;
-		for (Villager villager : player.level().getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(DialogEngine.RANGE))) {
-			Vec3 to = villager.getBoundingBox().getCenter().subtract(eye);
+		for (LivingEntity speaker : player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(DialogEngine.RANGE),
+				e -> Speakers.kindOf(e) != null)) {
+			Vec3 to = speaker.getBoundingBox().getCenter().subtract(eye);
 			double dot = look.dot(to.normalize());
 			if (to.length() <= DialogEngine.RANGE && dot > bestDot) {
-				best = villager;
+				best = speaker;
 				bestDot = dot;
 			}
 		}
