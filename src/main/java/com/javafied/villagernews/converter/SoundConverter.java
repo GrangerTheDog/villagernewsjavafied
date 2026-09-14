@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Converts Bedrock {@code sounds/sound_definitions.json} + its {@code .ogg}
@@ -19,9 +18,21 @@ import java.util.Set;
 public final class SoundConverter {
 	private static final String SOUNDS_PREFIX = "sounds/";
 	/** Bedrock entity -> Java sound event prefix, for vanilla mobs whose sounds the add-on silences. */
-	private static final Map<String, String> VANILLA_ENTITIES = Map.of("villager_v2", "entity.villager.");
-	/** Silenced events the mod already replaces with the add-on's own reactions; the rest stay vanilla for now. */
-	private static final Set<String> REPLACED_EVENTS = Set.of("ambient", "hurt", "death");
+	private static final Map<String, String> VANILLA_ENTITIES = Map.of(
+			"villager", "entity.villager.",
+			"villager_v2", "entity.villager.",
+			"wandering_trader", "entity.wandering_trader.");
+	/** Bedrock's entity sound events -> Java's (trading is "haggle" in Bedrock); the rest have no Java counterpart. */
+	private static final Map<String, String> EVENTS = Map.of(
+			"ambient", "ambient",
+			"hurt", "hurt",
+			"death", "death",
+			"haggle", "trade",
+			"haggle.yes", "yes",
+			"haggle.no", "no");
+
+	/** The quietest a sound can be in Java's sounds.json (it must be above 0): -80 dB. */
+	private static final double INAUDIBLE = 0.0001;
 
 	private SoundConverter() {
 	}
@@ -39,6 +50,7 @@ public final class SoundConverter {
 
 		JsonObject outSounds = new JsonObject();
 		int copied = 0;
+		String anySound = null;
 
 		for (String eventName : definitions.keySet()) {
 			JsonObject definition = definitions.getAsJsonObject(eventName);
@@ -66,7 +78,11 @@ public final class SoundConverter {
 				Files.copy(srcOgg, dstOgg, StandardCopyOption.REPLACE_EXISTING);
 				copied++;
 				// Unqualified names in sounds.json resolve to minecraft:, not to this pack's namespace.
-				outSoundList.add(ConverterUtil.MOD_ID + ":" + withoutPrefix);
+				String sound = ConverterUtil.MOD_ID + ":" + withoutPrefix;
+				outSoundList.add(sound);
+				if (anySound == null || sound.compareTo(anySound) < 0) {
+					anySound = sound;
+				}
 			}
 
 			outDefinition.add("sounds", outSoundList);
@@ -75,16 +91,21 @@ public final class SoundConverter {
 		}
 
 		ConverterUtil.writeJson(outputAssetsDir.resolve("sounds.json"), outSounds);
-		writeSilencedVanillaSounds(resourcePack, outputAssetsDir.resolveSibling("minecraft"));
+		if (anySound != null) {
+			writeSilencedVanillaSounds(resourcePack, outputAssetsDir.resolveSibling("minecraft"), anySound);
+		}
 		return copied;
 	}
 
 	/**
-	 * The add-on turns vanilla villager sounds down to volume 0 in its
-	 * {@code sounds.json} because its own voice lines take over. Mirror that for
-	 * the events the mod replaces, by overriding them with no sounds at all.
+	 * The add-on turns vanilla villager and wandering trader voices (idle,
+	 * hurt, death, trading) down to volume 0 in its {@code sounds.json}, as
+	 * its own voice lines take over. Mirror that: the events play a sound too
+	 * quiet to hear and have no subtitle. (Java won't take a volume of 0 - it
+	 * rejects the whole file - and an event with no sounds logs a warning
+	 * each time it's played; any sound of the pack will do.)
 	 */
-	private static void writeSilencedVanillaSounds(Path resourcePack, Path minecraftAssetsDir) throws IOException {
+	private static void writeSilencedVanillaSounds(Path resourcePack, Path minecraftAssetsDir, String anySound) throws IOException {
 		Path file = resourcePack.resolve("sounds.json");
 		if (!Files.exists(file)) {
 			return;
@@ -103,16 +124,26 @@ public final class SoundConverter {
 			}
 			for (String event : events.keySet()) {
 				JsonElement volume = events.getAsJsonObject(event).get("volume");
-				if (REPLACED_EVENTS.contains(event) && volume != null && volume.getAsDouble() == 0) {
-					JsonObject silent = new JsonObject();
-					silent.addProperty("replace", true);
-					silent.add("sounds", new JsonArray());
-					overrides.add(entity.getValue() + event, silent);
+				String javaEvent = EVENTS.get(event);
+				if (javaEvent != null && volume != null && volume.getAsDouble() == 0) {
+					overrides.add(entity.getValue() + javaEvent, silent(anySound));
 				}
 			}
 		}
 		if (!overrides.isEmpty()) {
 			ConverterUtil.writeJson(minecraftAssetsDir.resolve("sounds.json"), overrides);
 		}
+	}
+
+	private static JsonObject silent(String anySound) {
+		JsonObject muted = new JsonObject();
+		muted.addProperty("name", anySound);
+		muted.addProperty("volume", INAUDIBLE);
+		JsonArray sounds = new JsonArray();
+		sounds.add(muted);
+		JsonObject silent = new JsonObject();
+		silent.addProperty("replace", true);
+		silent.add("sounds", sounds);
+		return silent;
 	}
 }
