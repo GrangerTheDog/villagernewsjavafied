@@ -81,6 +81,9 @@ class AddonNamesTest {
 		for (var property : names.all(AddonNames.Kind.PROPERTY).entrySet()) {
 			assertTrue(behaviors.contains("\"" + property.getValue() + "\""), "property " + property.getKey());
 		}
+		for (var entity : names.all(AddonNames.Kind.ENTITY).entrySet()) {
+			assertTrue(behaviors.contains("oreville_vn:" + entity.getValue() + "\""), "entity " + entity.getKey());
+		}
 		for (var character : names.all(AddonNames.Kind.CHARACTER).entrySet()) {
 			assertTrue(behaviors.contains("oreville_vn:" + character.getValue() + "\""), "character " + character.getKey());
 		}

@@ -32,7 +32,7 @@ public final class AddonNames {
 
 	/** A kind of identifier, and its section in the names file. */
 	public enum Kind {
-		CHARACTER("characters"), ITEM("items"), PROPERTY("properties"), DIALOG("dialogs"), DIALOG_GROUP("dialog_groups"),
+		CHARACTER("characters"), ENTITY("entities"), ITEM("items"), PROPERTY("properties"), DIALOG("dialogs"), DIALOG_GROUP("dialog_groups"),
 		DIALOG_TAG("dialog_tags"), SCRIPT_EVENT("script_events"), SCRIPT_KEY("script_keys"), GUIDE_PAGE("guide_pages"),
 		VARIABLE("variables"), BONE("bones");
 

@@ -11,6 +11,9 @@
     "wandering_trader": "txczvv",
     "wooly": "mlkxjo"
   },
+  "entities": {
+    "trade_tier_probe": "vlgzoe"
+  },
   "items": {
     "handbook": "kfjmlk",
     "mayor_hat": "cryhjc",
@@ -28,6 +31,7 @@
     "dodge_pose": "p:ihxrtl",
     "packed_state": "p:fsjsbp",
     "vehicle": "p:enczhb",
+    "trade_tier": "p:mreyue",
     "player_nearby": "p:zsuvyv",
     "player_close": "p:olbxcw"
   },

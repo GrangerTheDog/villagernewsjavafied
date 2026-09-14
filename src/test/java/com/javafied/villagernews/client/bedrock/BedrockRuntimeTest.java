@@ -218,6 +218,22 @@ class BedrockRuntimeTest {
 		assertTexturesExist(plan);
 	}
 
+	/** The level badge follows the villager's trading level (which the add-on reads through its trade-tier probe). */
+	@Test
+	void levelBadgeShowsTheTradeTier() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		List<String> novice = textures(BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1,
+				Map.of(AddonNames.property("trade_tier"), new com.google.gson.JsonPrimitive(0))), 0));
+		List<String> master = textures(BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1,
+				Map.of(AddonNames.property("trade_tier"), new com.google.gson.JsonPrimitive(4))), 0));
+		System.out.println("  novice " + novice + "\n  master " + master);
+		assertFalse(novice.equals(master), "a master's badge differs from a novice's");
+	}
+
+	private static List<String> textures(RenderPlan plan) {
+		return plan.layers().stream().map(layer -> layer.texture().getPath()).toList();
+	}
+
 	@Test
 	void villagerHoldsTheSignItWasGiven() {
 		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");

@@ -38,7 +38,8 @@ final class VillagerPuppetPort {
 	/** {@code ntshmr}: the host state the script copies onto the puppet's properties. */
 	static Map<String, Value> hostDrivenProperties(Entity host) {
 		return Map.of(PuppetHost.packedStateProperty(), Value.of(PuppetHost.packedState(host)),
-				PuppetHost.vehicleProperty(), Value.of(PuppetHost.vehicleIndex(host)));
+				PuppetHost.vehicleProperty(), Value.of(PuppetHost.vehicleIndex(host)),
+				PuppetHost.tradeTierProperty(), Value.of(PuppetHost.tradeTier(host)));
 	}
 
 	/**

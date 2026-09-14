@@ -5,6 +5,7 @@ import com.javafied.villagernews.names.AddonNames;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.npc.villager.Villager;
 
 /**
  * The state the add-on's script copies from each real villager onto its
@@ -16,6 +17,22 @@ public final class PuppetHost {
 	/** The {@code packed_state} property: sleeping, on ground, in water and vehicle packed as decimal digits. */
 	public static String packedStateProperty() {
 		return AddonNames.property("packed_state");
+	}
+
+	/**
+	 * The {@code trade_tier} property: the villager's trading level, 0 (novice)
+	 * to 4 (master), which its level badge shows. The add-on can only read it
+	 * in Molang, so its script seats the villager on an invisible helper
+	 * entity (the {@code trade_tier_probe}) whose seat script reads the rider's
+	 * tier and reports it back; here it comes straight from the villager.
+	 */
+	public static String tradeTierProperty() {
+		return AddonNames.property("trade_tier");
+	}
+
+	/** The villager's trading level as Bedrock counts it (Java's levels start at 1); -1 if it doesn't trade. */
+	public static int tradeTier(Entity host) {
+		return host instanceof Villager villager ? villager.getVillagerData().level() - 1 : -1;
 	}
 
 	/** The {@code vehicle} property, see {@link #vehicleIndex}. */

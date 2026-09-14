@@ -35,6 +35,9 @@ public final class BehaviorProperties {
 		if (PuppetHost.packedStateProperty().equals(name)) {
 			return (double) PuppetHost.packedState(entity);
 		}
+		if (PuppetHost.tradeTierProperty().equals(name)) {
+			return (double) PuppetHost.tradeTier(entity);
+		}
 		if (PuppetHost.vehicleProperty().equals(name)) {
 			return (double) PuppetHost.vehicleIndex(entity);
 		}

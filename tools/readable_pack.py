@@ -40,7 +40,7 @@ def build_rewriter(names, dialog_names):
         return {v: k for k, v in names.get(section, {}).items()}
 
     namespaced = {}
-    for section in ("characters", "items"):
+    for section in ("characters", "entities", "items"):
         namespaced.update(inverse(section))
     events = {v.split(":", 1)[1]: k for k, v in names.get("script_events", {}).items()}
     properties = {v[2:]: k for k, v in names.get("properties", {}).items()}

@@ -15,7 +15,7 @@ For add-on 1.0.4 the guide titles name 451 of the 523 dialogs, and conversation 
 
 **Everything else** comes from the names file for the add-on's version: `src/main/resources/villagernewsjavafied/names/villager_news-<version>.json`. It holds only identifiers and our own names, never add-on content. Its sections are:
 
-- `characters` and `items`
+- `characters`, `entities` (helper entities, like the `trade_tier_probe`) and `items`
 - `properties`
 - `dialog_groups` and `dialog_tags`
 - `script_events` and `script_keys` (the script's own property names, which the converter reads)
