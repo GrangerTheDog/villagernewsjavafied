@@ -56,9 +56,26 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 			List<BonePattern> materials, List<BonePattern> partVisibility, List<String> uvOffset) {
 	}
 
+	/** @param attachables how held items are drawn, keyed like client entities (same shape of definition) */
 	public record Snapshot(Map<String, ClientEntity> clientEntities, Map<String, RenderController> renderControllers,
 			Map<String, Map<String, JsonElement>> propertyDefaults, BedrockMaterials materials,
-			Map<String, BedrockAnimations.Animation> animations, Map<String, BedrockAnimations.Controller> animationControllers) {
+			Map<String, BedrockAnimations.Animation> animations, Map<String, BedrockAnimations.Controller> animationControllers,
+			Map<String, ClientEntity> attachables) {
+		/** Like {@link #clientEntity}: a full identifier or just its path. */
+		public ClientEntity attachable(String identifier) {
+			String key = identifier.toLowerCase(Locale.ROOT);
+			ClientEntity exact = attachables.get(key);
+			if (exact != null || key.contains(":")) {
+				return exact;
+			}
+			for (Map.Entry<String, ClientEntity> entry : attachables.entrySet()) {
+				if (entry.getKey().endsWith(":" + key)) {
+					return entry.getValue();
+				}
+			}
+			return null;
+		}
+
 		/** Accepts a full identifier or just its path ("villager"), since the add-on's namespace is its own business. */
 		public ClientEntity clientEntity(String identifier) {
 			String key = identifier.toLowerCase(Locale.ROOT);
@@ -92,7 +109,7 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 	}
 
 	private static volatile Snapshot current =
-			new Snapshot(Map.of(), Map.of(), Map.of(), BedrockMaterials.EMPTY, Map.of(), Map.of());
+			new Snapshot(Map.of(), Map.of(), Map.of(), BedrockMaterials.EMPTY, Map.of(), Map.of(), Map.of());
 
 	public static Snapshot get() {
 		return current;
@@ -112,8 +129,10 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 		forEach(manager, "bedrock", "properties.json", properties::add);
 		forEach(manager, "bedrock/animations", ".json", animations::add);
 		forEach(manager, "bedrock/animation_controllers", ".json", animationControllers::add);
+		List<JsonObject> attachables = new ArrayList<>();
+		forEach(manager, "bedrock/attachables", ".json", attachables::add);
 
-		current = parse(clientEntities, renderControllers, materials, properties, animations, animationControllers);
+		current = parse(clientEntities, renderControllers, materials, properties, animations, animationControllers, attachables);
 		VillagerNewsJavafied.LOGGER.info("Loaded {} Bedrock client entities, {} render controllers, {} animations, {} animation controllers",
 				current.clientEntities().size(), current.renderControllers().size(),
 				current.animations().size(), current.animationControllers().size());
@@ -123,6 +142,20 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 	public static Snapshot parse(List<JsonObject> clientEntityFiles, List<JsonObject> renderControllerFiles,
 			List<JsonObject> materialFiles, List<JsonObject> propertyFiles, List<JsonObject> animationFiles,
 			List<JsonObject> animationControllerFiles) {
+		return parse(clientEntityFiles, renderControllerFiles, materialFiles, propertyFiles, animationFiles, animationControllerFiles, List.of());
+	}
+
+	public static Snapshot parse(List<JsonObject> clientEntityFiles, List<JsonObject> renderControllerFiles,
+			List<JsonObject> materialFiles, List<JsonObject> propertyFiles, List<JsonObject> animationFiles,
+			List<JsonObject> animationControllerFiles, List<JsonObject> attachableFiles) {
+		Map<String, ClientEntity> attachables = new HashMap<>();
+		for (JsonObject json : attachableFiles) {
+			JsonObject attachable = json.getAsJsonObject("minecraft:attachable");
+			if (attachable != null && attachable.has("description")) {
+				ClientEntity parsed = parseClientEntity(attachable.getAsJsonObject("description"));
+				attachables.put(parsed.identifier().toLowerCase(Locale.ROOT), parsed);
+			}
+		}
 		Map<String, ClientEntity> clientEntities = new HashMap<>();
 		for (JsonObject json : clientEntityFiles) {
 			JsonObject description = json.getAsJsonObject("minecraft:client_entity").getAsJsonObject("description");
@@ -154,7 +187,7 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 		Map<String, BedrockAnimations.Controller> controllers = new HashMap<>();
 		animationControllerFiles.forEach(json -> BedrockAnimations.parseControllers(json, controllers));
 		return new Snapshot(Map.copyOf(clientEntities), Map.copyOf(renderControllers), Map.copyOf(properties),
-				BedrockMaterials.parse(materials), Map.copyOf(animations), Map.copyOf(controllers));
+				BedrockMaterials.parse(materials), Map.copyOf(animations), Map.copyOf(controllers), Map.copyOf(attachables));
 	}
 
 	private static void forEach(ResourceManager manager, String dir, String suffix, Consumer<JsonObject> consumer) {

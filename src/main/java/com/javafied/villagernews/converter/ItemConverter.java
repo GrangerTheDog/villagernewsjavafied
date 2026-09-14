@@ -13,7 +13,9 @@ import java.nio.file.Path;
  * JSON that point at it; likewise a {@code <entity>_spawn_egg} for every
  * client entity with a spawn-egg texture. Head-worn items also get their 3D
  * attachable model ({@code geckolib/models/item/<id>}) and texture
- * ({@code textures/attachable/<id>.png}) for GeckoLib's armor renderer.
+ * ({@code textures/attachable/<id>.png}) for GeckoLib's armor renderer;
+ * held items with an attachable (the handbook, the microphone) are drawn
+ * from it in the hand.
  *
  * <p>Icons have to land under {@code textures/item/}: since 1.19.3 only the
  * directories listed in {@code atlases/items.json} get stitched into the item
@@ -62,6 +64,8 @@ public final class ItemConverter {
 				count++;
 				if (isHeadWearable(item.getAsJsonObject("components"))) {
 					convertWornModel(resourcePack, identifier, path, outputAssetsDir);
+				} else if (hasAttachable(resourcePack, identifier)) {
+					writeHeldModels(outputAssetsDir, path);
 				}
 			}
 		}
@@ -158,6 +162,64 @@ public final class ItemConverter {
 				return;
 			}
 		}
+	}
+
+	private static boolean hasAttachable(Path resourcePack, String identifier) throws IOException {
+		Path attachables = resourcePack.resolve("attachables");
+		if (!Files.isDirectory(attachables)) {
+			return false;
+		}
+		try (var stream = Files.walk(attachables)) {
+			for (Path file : stream.filter(p -> p.toString().endsWith(".json")).toList()) {
+				JsonObject attachable = ConverterUtil.readJson(file).getAsJsonObject("minecraft:attachable");
+				JsonObject description = attachable == null ? null : attachable.getAsJsonObject("description");
+				if (description != null && identifier.equals(description.get("identifier").getAsString())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * A held item with an attachable: its icon everywhere but in the hands, where
+	 * GeckoLib's special item renderer draws the attachable (as the mod's
+	 * attachable renderer animates it). The hand model keeps the default
+	 * (identity) transforms: the attachable's own animations place it.
+	 */
+	private static void writeHeldModels(Path outputAssetsDir, String path) throws IOException {
+		JsonObject textures = new JsonObject();
+		textures.addProperty("particle", ConverterUtil.MOD_ID + ":item/" + path);
+		JsonObject held = new JsonObject();
+		held.add("textures", textures);
+		ConverterUtil.writeJson(outputAssetsDir.resolve("models").resolve("item").resolve(path + "_held.json"), held);
+
+		JsonObject geckolib = new JsonObject();
+		geckolib.addProperty("type", "geckolib:geckolib");
+		JsonObject special = new JsonObject();
+		special.addProperty("type", "minecraft:special");
+		special.addProperty("base", ConverterUtil.MOD_ID + ":item/" + path + "_held");
+		special.add("model", geckolib);
+		JsonObject hands = new JsonObject();
+		JsonArray when = new JsonArray();
+		for (String context : new String[] {"firstperson_righthand", "firstperson_lefthand", "thirdperson_righthand", "thirdperson_lefthand"}) {
+			when.add(context);
+		}
+		hands.add("when", when);
+		hands.add("model", special);
+		JsonArray cases = new JsonArray();
+		cases.add(hands);
+		JsonObject icon = new JsonObject();
+		icon.addProperty("type", "minecraft:model");
+		icon.addProperty("model", ConverterUtil.MOD_ID + ":item/" + path);
+		JsonObject select = new JsonObject();
+		select.addProperty("type", "minecraft:select");
+		select.addProperty("property", "minecraft:display_context");
+		select.add("cases", cases);
+		select.add("fallback", icon);
+		JsonObject definition = new JsonObject();
+		definition.add("model", select);
+		ConverterUtil.writeJson(outputAssetsDir.resolve("items").resolve(path + ".json"), definition);
 	}
 
 	/** Bedrock accepts {@code "icon": "key"}, {@code {"texture": "key"}} and {@code {"textures": {"default": "key"}}}. */

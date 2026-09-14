@@ -30,12 +30,12 @@ import java.util.function.Function;
 public final class ModItems {
 	private static final List<Item> TAB_CONTENTS = new ArrayList<>();
 
-	/** Villager News Handbook: the add-on's guide (its pages come in a later pass). */
-	public static final Item HANDBOOK = register("kfjmlk", Item::new, new Item.Properties().stacksTo(1));
+	/** Villager News Handbook: the add-on's guide, read from the player's converted add-on. */
+	public static final Item HANDBOOK = register("kfjmlk", p -> AttachableItem.create(p, true), new Item.Properties().stacksTo(1));
 	public static final Item MAYOR_HAT = wearable("cryhjc");
 	public static final Item TESTIFICATE_MAN_HELMET = wearable("ufernq");
 	public static final Item MOUSTACHE = wearable("odplew");
-	public static final Item MICROPHONE = register("dsojot", Item::new, new Item.Properties().stacksTo(1));
+	public static final Item MICROPHONE = register("dsojot", p -> AttachableItem.create(p, false), new Item.Properties().stacksTo(1));
 	public static final Item VILLAGER_NOSE = wearable("qzhdgf");
 
 	public static final Item MAYOR_SPAWN_EGG = spawnEgg("ilvfra", EntityTypes.VILLAGER);

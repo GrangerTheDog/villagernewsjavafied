@@ -9,6 +9,8 @@ import com.javafied.villagernews.dialog.DialogDebug;
 import com.javafied.villagernews.dialog.DialogEngine;
 import com.javafied.villagernews.dialog.BlockUseReactions;
 import com.javafied.villagernews.dialog.DialogPayloads;
+import com.javafied.villagernews.guide.GuidePayloads;
+import com.javafied.villagernews.guide.GuideSettings;
 import com.javafied.villagernews.dialog.PlayerActionReactions;
 import com.javafied.villagernews.dialog.VillagerLifeReactions;
 import com.javafied.villagernews.dialog.HurtReactions;
@@ -39,6 +41,8 @@ public class VillagerNewsJavafied implements ModInitializer {
 		ModItems.init();
 		VillagerCommand.init();
 		DialogPayloads.register();
+		GuidePayloads.register();
+		GuideSettings.init();
 		DialogEngine.init();
 		DialogDebug.init();
 		VillagerReactions.init();

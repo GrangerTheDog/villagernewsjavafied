@@ -128,13 +128,49 @@ public final class BedrockRuntime {
 
 	// Render-thread only. Weak keys: state goes away with the entity.
 	private static final Map<Entity, EntityState> STATES = new WeakHashMap<>();
+	/** Per holder, per attachable and way of holding it (first/third person, which hand): each runs its own controllers. */
+	private static final Map<Entity, Map<String, EntityState>> ATTACHABLE_STATES = new WeakHashMap<>();
 
 	private BedrockRuntime() {
 	}
 
+	private static final String STYLE_PROPERTY = "p:pmpece";
+
 	/** Starts a one-shot animation on the entity's model, e.g. the lip sync of a line it's speaking. */
 	public static void playAnimation(Entity entity, String animation) {
 		STATES.computeIfAbsent(entity, e -> new EntityState()).playAnimation(animation);
+	}
+
+	/**
+	 * A held item's attachable as its holder carries it, animated like the
+	 * add-on's: queries answer for the holder, and {@code c.is_first_person} /
+	 * {@code c.item_slot} say how it's held. Null if the add-on has no such
+	 * attachable (or isn't converted).
+	 */
+	public static RenderPlan evaluateAttachable(Entity holder, String attachable, boolean firstPerson, boolean mainHand, float partialTick) {
+		BedrockDefinitions.Snapshot defs = BedrockDefinitions.get();
+		ClientEntity ce = defs.attachable(attachable);
+		if (ce == null) {
+			return null;
+		}
+		String key = attachable + (firstPerson ? "/first_person" : "/third_person") + (mainHand ? "/main_hand" : "/off_hand");
+		EntityState state = ATTACHABLE_STATES.computeIfAbsent(holder, e -> new HashMap<>()).computeIfAbsent(key, k -> new EntityState());
+		MutableObjectBinding context = new MutableObjectBinding();
+		context.set("is_first_person", Value.of(firstPerson));
+		context.set("item_slot", StringValue.of(mainHand ? "main_hand" : "off_hand"));
+		EntityQueries queries = new EntityQueries(holder, partialTick, Map.of(), Map.of());
+		RenderPlan plan = plan(defs, ce, state, (holder.tickCount + partialTick) / 20.0, queries, 0, context);
+		state.pendingSounds.clear();
+		return plan;
+	}
+
+	/** An attachable's default geometry and texture, for when its render controllers draw nothing. */
+	public static Layer attachableBaseLayer(String attachable) {
+		ClientEntity ce = BedrockDefinitions.get().attachable(attachable);
+		if (ce == null || !ce.geometry().containsKey("default") || !ce.textures().containsKey("default")) {
+			return null;
+		}
+		return new Layer(modelId(ce.geometry().get("default")), textureId(ce.textures().get("default")), BedrockMaterials.Kind.CUTOUT);
 	}
 
 	/** Null if the add-on hasn't been converted (or doesn't define this client entity). */
@@ -151,6 +187,10 @@ public final class BedrockRuntime {
 		// Properties the server's port of the add-on changed (what it wears, its nose, ...).
 		entity.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.<String, String>of())
 				.forEach((name, value) -> overrides.putIfAbsent(name, typed(defaults.get(name), value)));
+		// The handbook's "Villager Style", which the add-on sets per player as a property override.
+		if (defaults.containsKey(STYLE_PROPERTY)) {
+			overrides.put(STYLE_PROPERTY, Value.of(com.javafied.villagernews.client.guide.ClientSettings.style()));
+		}
 		EntityQueries queries = new EntityQueries(entity, partialTick, defaults, overrides);
 		RenderPlan plan = plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
 				puppet ? VillagerPuppetPort.lift(entity) : 0);
@@ -185,6 +225,12 @@ public final class BedrockRuntime {
 	 */
 	public static RenderPlan plan(BedrockDefinitions.Snapshot defs, ClientEntity ce, EntityState state, double lifeTime,
 			ObjectValue entityQueries, double lift) {
+		return plan(defs, ce, state, lifeTime, entityQueries, lift, null);
+	}
+
+	/** @param context Molang's {@code c.*}/{@code context.*} (e.g. an attachable's {@code c.is_first_person}); may be null */
+	public static RenderPlan plan(BedrockDefinitions.Snapshot defs, ClientEntity ce, EntityState state, double lifeTime,
+			ObjectValue entityQueries, double lift, ObjectValue context) {
 		if (!ce.identifier().equals(state.clientEntity)) {
 			state.clientEntity = ce.identifier();
 			state.controllers.clear();
@@ -209,6 +255,10 @@ public final class BedrockRuntime {
 		scope.set("texture", table(ce.textures()));
 		scope.set("geometry", table(ce.geometry()));
 		scope.set("material", table(ce.materials()));
+		if (context != null) {
+			scope.set("context", context);
+			scope.set("c", context);
+		}
 
 		if (firstFrame) {
 			ce.initialize().forEach(script -> MolangProgram.of(script).eval(scope));

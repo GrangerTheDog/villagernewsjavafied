@@ -68,6 +68,9 @@ public final class SpecialCharacters {
 	}
 
 	private static void maybeBecomeCharacter(ServerLevel level, Villager villager) {
+		if (!com.javafied.villagernews.guide.GuideSettings.current().specialVillagers()) {
+			return; // turned off in the handbook's settings
+		}
 		ServerLevel overworld = level.getServer().overworld();
 		Map<String, String> placed = overworld.getAttachedOrElse(ModAttachments.SPECIAL_CHARACTERS, Map.of());
 		List<String> missing = new ArrayList<>();

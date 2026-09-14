@@ -3,6 +3,7 @@ package com.javafied.villagernews.dialog;
 import com.javafied.villagernews.ConvertedPack;
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.content.ModAttachments;
+import com.javafied.villagernews.guide.GuideSettings;
 import com.javafied.villagernews.dialog.DialogLibrary.Dialog;
 import com.javafied.villagernews.dialog.DialogLibrary.Line;
 import com.javafied.villagernews.dialog.DialogLibrary.TagCooldown;
@@ -49,7 +50,8 @@ import java.util.function.BiConsumer;
  * and for that speaker. While talking, the speaker stands still and looks at
  * whoever it's talking to.
  *
- * <p>Numbers are the script's, at its default "Chattiness" setting.
+ * <p>Numbers are the script's, at its default "Chattiness" setting; the
+ * handbook's settings ({@link GuideSettings}) change them as the add-on's do.
  */
 public final class DialogEngine {
 	/** Which speakers a request accepts; the script's {@code states} list. */
@@ -180,8 +182,6 @@ public final class DialogEngine {
 	/** A player this close to someone already talking won't hear a second villager start. */
 	private static final double LISTENER_RADIUS = 10;
 	private static final double OVERLAP_RADIUS = 5;
-	/** The "Chattiness" multiplier: cooldowns are divided by it. */
-	private static final double CHATTINESS = 1;
 
 	private static DialogEngine current;
 	/** Registered once at startup; every server's engine calls them. */
@@ -379,6 +379,9 @@ public final class DialogEngine {
 		if (!speaker.isAlive()) {
 			return "dead";
 		}
+		if (GuideSettings.current().chattiness() == GuideSettings.MUTED) {
+			return "villagers are muted in the handbook's settings";
+		}
 		Speakers.Kind kind = Speakers.kindOf(speaker);
 		if (kind == null || !options.kinds().contains(kind)) {
 			return "not a line for " + (kind == null ? "this mob" : kind.name().toLowerCase(java.util.Locale.ROOT));
@@ -490,7 +493,7 @@ public final class DialogEngine {
 				}
 				continue;
 			}
-			boolean paced = request.options().urgent() || now - lastStart >= START_GAP_TICKS && speakers() < MAX_SPEAKERS;
+			boolean paced = request.options().urgent() || now - lastStart >= START_GAP_TICKS && (superChatty() || speakers() < MAX_SPEAKERS);
 			boolean ready = request.options().ready() == null || request.options().ready().test(speaker);
 			if (paced && ready && steady(speaker) && start(speaker, request.dialog(), request.options())) {
 				it.remove();
@@ -528,7 +531,7 @@ public final class DialogEngine {
 		if (cooldown != null) {
 			return refuse(speaker, dialog.id(), cooldown);
 		}
-		if (!options.interrupt()) {
+		if (!options.interrupt() && !superChatty()) {
 			if (speakers() >= MAX_SPEAKERS) {
 				return refuse(speaker, dialog.id(), MAX_SPEAKERS + " villagers already talking");
 			}
@@ -594,10 +597,11 @@ public final class DialogEngine {
 		List<Line> lines = dialog.lines();
 		Integer previous = lastLine.get(dialog.id());
 		int skip = previous == null || lines.size() <= 1 ? -1 : previous;
+		double[] weights = weights(lines, GuideSettings.current().rareLines());
 		double total = 0;
 		for (int i = 0; i < lines.size(); i++) {
 			if (i != skip) {
-				total += Math.max(0, lines.get(i).weight());
+				total += weights[i];
 			}
 		}
 		if (total <= 0) {
@@ -605,18 +609,45 @@ public final class DialogEngine {
 		}
 		double roll = ThreadLocalRandom.current().nextDouble() * total;
 		for (int i = 0; i < lines.size(); i++) {
-			if (i != skip && (roll -= Math.max(0, lines.get(i).weight())) <= 0) {
+			if (i != skip && (roll -= weights[i]) <= 0) {
 				return i;
 			}
 		}
 		return skip == 0 && lines.size() > 1 ? 1 : 0;
 	}
 
+	/**
+	 * The "Rare Villager Voicelines" setting: lines' weights as they are; or,
+	 * for "Never", only those within 80% of the dialog's heaviest; or, for
+	 * "Often", turned upside down (the rarest become the likeliest).
+	 */
+	static double[] weights(List<Line> lines, int rareLines) {
+		double min = Double.POSITIVE_INFINITY;
+		double max = Double.NEGATIVE_INFINITY;
+		for (Line line : lines) {
+			min = Math.min(min, line.weight());
+			max = Math.max(max, line.weight());
+		}
+		double[] weights = new double[lines.size()];
+		for (int i = 0; i < weights.length; i++) {
+			double w = lines.get(i).weight();
+			double adjusted = switch (rareLines) {
+				case GuideSettings.RARE_NEVER -> w >= 0.8 * max ? w : 0;
+				case GuideSettings.RARE_OFTEN -> max + min - w;
+				default -> w;
+			};
+			weights[i] = Double.isFinite(adjusted) && adjusted > 0 ? adjusted : 0;
+		}
+		return weights;
+	}
+
 	private void startCooldowns(LivingEntity speaker, Dialog dialog, Line line) {
 		long now = now();
 		Cooldowns own = speakerCooldowns.computeIfAbsent(speaker, e -> new Cooldowns());
-		if (dialog.globalCooldown().any() > 0) {
-			global.any = now + cooldownTicks(dialog.globalCooldown().any(), line);
+		double globalAny = Double.isNaN(dialog.globalCooldown().any()) ? GuideSettings.current().defaultGlobalAny()
+				: dialog.globalCooldown().any();
+		if (globalAny > 0) {
+			global.any = now + cooldownTicks(globalAny, line);
 		}
 		if (dialog.globalCooldown().same() > 0) {
 			global.dialogs.put(dialog.id(), now + cooldownTicks(dialog.globalCooldown().same(), line));
@@ -637,8 +668,14 @@ public final class DialogEngine {
 		}
 	}
 
-	/** A cooldown counts from the end of the line: its length in ticks, plus the line's own. */
+	/** A cooldown counts from the end of the line: its length in ticks (divided by the chattiness multiplier), plus the line's own. */
 	private static long cooldownTicks(double seconds, Line line) {
-		return (long) Math.floor(20 * seconds / CHATTINESS) + line.durationTicks();
+		double chattiness = GuideSettings.current().multiplier();
+		return (long) Math.floor(20 * seconds / (chattiness > 0 ? chattiness : 1)) + line.durationTicks();
+	}
+
+	/** At "Super Chatty" any number of villagers may talk at once, even over each other. */
+	private static boolean superChatty() {
+		return GuideSettings.current().chattiness() == GuideSettings.SUPER_CHATTY;
 	}
 }

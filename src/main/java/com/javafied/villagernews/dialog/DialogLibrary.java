@@ -48,8 +48,12 @@ public final class DialogLibrary {
 			Map<String, TagCooldown> tags) {
 	}
 
-	// The script's defaults (at its default "Chattiness" setting, which zeroes the global "any" cooldown).
-	private static final Cooldown DEFAULT_GLOBAL = new Cooldown(0, 10);
+	/**
+	 * The script's defaults. A dialog's world-wide "any" cooldown, when it sets
+	 * none, depends on the chattiness setting ({@code NaN} here; see
+	 * {@code GuideSettings.Values#defaultGlobalAny}).
+	 */
+	private static final Cooldown DEFAULT_GLOBAL = new Cooldown(Double.NaN, 10);
 	private static final Cooldown DEFAULT_ENTITY = new Cooldown(10, 40);
 	private static final TagCooldown DEFAULT_TAG = new TagCooldown(30, 15);
 

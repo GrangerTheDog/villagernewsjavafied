@@ -1,6 +1,7 @@
 package com.javafied.villagernews.client.bedrock;
 
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Layer;
+import com.javafied.villagernews.client.bedrock.BedrockRuntime.Pose;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.RenderPlan;
 
 import com.google.gson.JsonElement;
@@ -27,6 +28,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -41,7 +43,8 @@ class BedrockRuntimeTest {
 		assumeTrue(Files.isDirectory(bedrock), "run ./gradlew runConverter first");
 		defs = BedrockDefinitions.parse(read(bedrock.resolve("entity")), read(bedrock.resolve("render_controllers")),
 				read(bedrock.resolve("materials")), List.of(json(bedrock.resolve("properties.json"))),
-				read(bedrock.resolve("animations")), read(bedrock.resolve("animation_controllers")));
+				read(bedrock.resolve("animations")), read(bedrock.resolve("animation_controllers")),
+				Files.isDirectory(bedrock.resolve("attachables")) ? read(bedrock.resolve("attachables")) : List.of());
 	}
 
 	/** An adult, plains-biome farmer with skin 2 - what a freshly spawned vanilla villager could look like. */
@@ -226,6 +229,41 @@ class BedrockRuntimeTest {
 		assertTrue(plan.layers().stream().anyMatch(layer -> Math.abs(layer.vOffset() - 10 / 87f) < 1e-6),
 				"its 11th message scrolled into view");
 		assertTexturesExist(plan);
+	}
+
+	@Test
+	void heldItemsTakeTheirFirstAndThirdPersonPoses() {
+		for (String item : List.of("dsojot", "kfjmlk")) {
+			BedrockDefinitions.ClientEntity attachable = defs.attachable(item);
+			assumeTrue(attachable != null, "no attachables converted");
+			Pose third = attachablePose(attachable, false);
+			Pose first = attachablePose(attachable, true);
+			System.out.printf("%s third: pos(%.2f %.2f %.2f) rot(%.1f %.1f %.1f)  first: pos(%.2f %.2f %.2f) rot(%.1f %.1f %.1f)%n", item,
+					third.px, third.py, third.pz, third.rx, third.ry, third.rz, first.px, first.py, first.pz, first.rx, first.ry, first.rz);
+			assertTrue(Math.abs(third.rx) > 45, item + " held forward in third person");
+			assertTrue(Math.abs(first.px - third.px) + Math.abs(first.py - third.py) + Math.abs(first.pz - third.pz) > 0.1,
+					item + " has a first-person pose of its own");
+			assertTexturesExist(BedrockRuntime.plan(defs, attachable, new BedrockRuntime.EntityState(), 0, queries("minecraft:player", 0), 0,
+					context(false)));
+		}
+	}
+
+	private static Pose attachablePose(BedrockDefinitions.ClientEntity attachable, boolean firstPerson) {
+		BedrockRuntime.EntityState state = new BedrockRuntime.EntityState();
+		RenderPlan plan = null;
+		for (int frame = 0; frame < 4; frame++) {
+			plan = BedrockRuntime.plan(defs, attachable, state, frame * 0.05, queries("minecraft:player", 0), 0, context(firstPerson));
+		}
+		Pose pose = plan.poses().get("item");
+		assertNotNull(pose, attachable.identifier() + " item bone posed");
+		return pose;
+	}
+
+	private static MutableObjectBinding context(boolean firstPerson) {
+		MutableObjectBinding context = new MutableObjectBinding();
+		context.set("is_first_person", Value.of(firstPerson));
+		context.set("item_slot", StringValue.of("main_hand"));
+		return context;
 	}
 
 	private static void assertTexturesExist(RenderPlan plan) {

@@ -31,6 +31,8 @@ public final class BedrockDataConverter {
 		count += copyDir(resourcePack.resolve("animation_controllers"), outDir.resolve("animation_controllers"), ".json");
 		count += copyDir(resourcePack.resolve("animations"), outDir.resolve("animations"), ".json");
 		count += copyDir(resourcePack.resolve("materials"), outDir.resolve("materials"), ".material");
+		// Attachables: how held items are drawn and animated in the hand.
+		count += copyDir(resourcePack.resolve("attachables"), outDir.resolve("attachables"), ".json");
 		if (behaviorPack != null) {
 			writePropertyDefaults(behaviorPack.resolve("entities"), outDir.resolve("properties.json"));
 			count++;

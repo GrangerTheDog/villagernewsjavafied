@@ -48,6 +48,11 @@ public final class ModAttachments {
 			VillagerNewsJavafied.id("avoiding"),
 			builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all()));
 
+	/** On the overworld: the handbook's world settings (see {@code GuideSettings}). */
+	public static final AttachmentType<Map<String, Integer>> GUIDE_SETTINGS = AttachmentRegistry.create(
+			VillagerNewsJavafied.id("guide_settings"),
+			builder -> builder.persistent(Codec.unboundedMap(Codec.STRING, Codec.INT)));
+
 	/** Whether this player was already handed the add-on's handbook. */
 	public static final AttachmentType<Boolean> RECEIVED_HANDBOOK = AttachmentRegistry.create(
 			VillagerNewsJavafied.id("received_handbook"),

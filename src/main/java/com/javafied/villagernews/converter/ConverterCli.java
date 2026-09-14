@@ -21,7 +21,7 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 6;
+	public static final int SCHEMA_VERSION = 8;
 
 	private ConverterCli() {
 	}
@@ -61,6 +61,7 @@ public final class ConverterCli {
 		int itemCount = ItemConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
 		int bedrockFileCount = BedrockDataConverter.convert(addon.resourcePack, addon.behaviorPack, assetsDir);
 		int dialogCount = ScriptDataConverter.convert(addon.behaviorPack, outputDir);
+		int guidePageCount = GuideConverter.convert(addon.behaviorPack, assetsDir);
 
 		List<String> skipped = new ArrayList<>();
 		if (addon.behaviorPack != null) {
@@ -79,6 +80,7 @@ public final class ConverterCli {
 		System.out.println("Item icons/models converted: " + itemCount);
 		System.out.println("Bedrock definition files carried over: " + bedrockFileCount);
 		System.out.println("Dialogs extracted from the behavior script: " + dialogCount);
+		System.out.println("Handbook pages extracted from the behavior script: " + guidePageCount);
 		System.out.println("Skipped (behavior logic, ported later): " + skipped.size() + " files - see skip-report.txt");
 	}
 

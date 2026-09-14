@@ -31,6 +31,8 @@ public class VillagerNewsJavafiedClient implements ClientModInitializer {
 		MolangProgram.setErrorReporter(VillagerNewsJavafied.LOGGER::warn);
 		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(BedrockDefinitions.ID, new BedrockDefinitions());
 		DialogClient.init();
+		com.javafied.villagernews.client.guide.GuideClient.init();
+		com.javafied.villagernews.client.dev.DevShots.init();
 		DialogDebugOverlay.init();
 
 		// Wooly is drawn through VariantRenderers, so ordinary sheep keep vanilla's renderer.

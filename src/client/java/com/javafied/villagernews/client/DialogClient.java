@@ -2,6 +2,7 @@ package com.javafied.villagernews.client;
 
 import com.javafied.villagernews.client.bedrock.BedrockRuntime;
 import com.javafied.villagernews.client.bedrock.BedrockSounds;
+import com.javafied.villagernews.client.guide.ClientSettings;
 import com.javafied.villagernews.dialog.DialogLibrary;
 import com.javafied.villagernews.dialog.DialogPayloads;
 
@@ -80,7 +81,7 @@ public final class DialogClient {
 				continue;
 			}
 			it.remove();
-			if (client.player != null && client.options.showSubtitles().get() && subtitle.speaker().isAlive()
+			if (client.player != null && (ClientSettings.subtitles() || client.options.showSubtitles().get()) && subtitle.speaker().isAlive()
 					&& subtitle.speaker().distanceTo(client.player) <= SUBTITLE_RANGE) {
 				client.gui.hud.setOverlayMessage(Component.translatable(subtitle.key()), false);
 			}

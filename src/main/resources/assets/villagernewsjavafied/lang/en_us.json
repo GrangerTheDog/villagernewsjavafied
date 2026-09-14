@@ -1,3 +1,6 @@
 {
-  "itemGroup.villagernewsjavafied": "Villager News"
+  "itemGroup.villagernewsjavafied": "Villager News",
+  "guide.villagernewsjavafied.missing": "The handbook's pages come from your converted add-on - convert it first.",
+  "guide.villagernewsjavafied.operators_only": "Only operators can change the world's settings.",
+  "guide.villagernewsjavafied.no_server_settings": "This server doesn't have Villager News: Javafied."
 }
