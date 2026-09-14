@@ -132,7 +132,7 @@ public final class BedrockFilters {
 			case "is_sneaking" -> compare(subject.isShiftKeyDown(), operator, value);
 			case "is_moving" -> compare(isMoving(subject), operator, value);
 			case "is_riding" -> compare(subject.isPassenger(), operator, value);
-			case "is_baby" -> compare(living != null && living.isBaby(), operator, value);
+			case "is_baby" -> compare(BehaviorSensors.isBaby(subject), operator, value);
 			case "on_ground" -> compare(subject.onGround(), operator, value);
 			case "in_water" -> compare(subject.isInWater(), operator, value);
 			case "in_lava" -> compare(subject.isInLava(), operator, value);

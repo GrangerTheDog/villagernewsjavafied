@@ -240,7 +240,7 @@ public final class VillagerRoutineReactions {
 	}
 
 	private static boolean gathers(Villager villager, long time) {
-		return !villager.isBaby() && !"nitwit".equals(Speakers.profession(villager)) && time >= 8000 && time < 10000
+		return !Speakers.isBaby(villager) && !"nitwit".equals(Speakers.profession(villager)) && time >= 8000 && time < 10000
 				&& villager.getDeltaMovement().horizontalDistance() <= 0.02;
 	}
 }

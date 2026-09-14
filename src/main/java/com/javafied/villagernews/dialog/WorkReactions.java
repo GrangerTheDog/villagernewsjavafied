@@ -55,7 +55,7 @@ public final class WorkReactions {
 	static boolean atWorkHours(Villager villager) {
 		String profession = Speakers.profession(villager);
 		long time = Math.floorMod(villager.level().getOverworldClockTime(), 24000L);
-		return AT_WORK.containsKey(profession) && !villager.isBaby() && (time < 8000 || time >= 10000 && time < 11000);
+		return AT_WORK.containsKey(profession) && !Speakers.isBaby(villager) && (time < 8000 || time >= 10000 && time < 11000);
 	}
 
 	/**
@@ -64,7 +64,7 @@ public final class WorkReactions {
 	 * add-on ships but never triggers.
 	 */
 	public static void restocked(Villager villager) {
-		if (villager.level() instanceof ServerLevel && Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !villager.isBaby()) {
+		if (villager.level() instanceof ServerLevel && Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !Speakers.isBaby(villager)) {
 			Reactions.say(villager, START_WORK, Options.DEFAULT);
 		}
 	}

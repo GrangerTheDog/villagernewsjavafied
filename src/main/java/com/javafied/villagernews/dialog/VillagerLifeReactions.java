@@ -87,7 +87,7 @@ public final class VillagerLifeReactions {
 				return InteractionResult.PASS;
 			}
 			var held = player.getItemInHand(hand);
-			if (villager.isBaby()) {
+			if (Speakers.isBaby(villager)) {
 				if (!held.is(Items.SHEARS) && !held.is(Items.NAME_TAG) && !held.is(Items.VILLAGER_SPAWN_EGG)) {
 					Reactions.say(villager, BABY_ASKED_TO_TRADE, Options.DEFAULT.withStates(State.BABY).facing(player));
 				}
@@ -196,6 +196,6 @@ public final class VillagerLifeReactions {
 	/** The add-on's "running" baby: fast (0.18 blocks/tick) and in the daytime (ticks 0-11000). */
 	private static boolean sprinting(Villager villager) {
 		long time = Math.floorMod(villager.level().getOverworldClockTime(), 24000L);
-		return villager.isBaby() && time < 11000 && villager.getDeltaMovement().horizontalDistance() >= 0.18;
+		return Speakers.isBaby(villager) && time < 11000 && villager.getDeltaMovement().horizontalDistance() >= 0.18;
 	}
 }

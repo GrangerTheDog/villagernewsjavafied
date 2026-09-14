@@ -37,6 +37,10 @@ public final class BehaviorDefinitions {
 	/** @param components the entity's base components, as-is, for the few read directly (e.g. its trade table) */
 	public record Definition(String identifier, Map<String, Property> properties, List<Subsensor> subsensors,
 			List<Trigger> environmentTriggers, JsonObject events, JsonObject components) {
+		/** A baby for good ({@code minecraft:is_baby} among its base components): the Mayor. */
+		public boolean alwaysBaby() {
+			return components.has("minecraft:is_baby");
+		}
 	}
 
 	private final Map<String, Definition> byIdentifier;

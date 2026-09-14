@@ -89,7 +89,7 @@ public final class VillagerItemReactions {
 				return InteractionResult.PASS;
 			}
 			ItemStack stack = player.getItemInHand(hand);
-			boolean signs = Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !villager.isBaby()
+			boolean signs = Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && !Speakers.isBaby(villager)
 					&& (signWood(stack) >= 0 || (stack.is(ItemTags.AXES) || stack.is(Items.SHEARS)) && holdsSign(villager));
 			if (!signs && !stack.is(Items.SHEARS) && !stack.is(ModItems.VILLAGER_NOSE) && !ACCESSORIES.contains(itemPath(stack))) {
 				return InteractionResult.PASS;
@@ -118,7 +118,7 @@ public final class VillagerItemReactions {
 				dropFromHead(level, villager, new ItemStack(BuiltInRegistries.ITEM.getValue(VillagerNewsJavafied.id(accessory))));
 				properties.setNamed(PROPERTY_ACCESSORY, new JsonPrimitive(NONE));
 				react(villager, player, TAKEN_ACCESSORY, State.ADULT);
-			} else if (hasNose && !villager.isBaby()) {
+			} else if (hasNose && !Speakers.isBaby(villager)) {
 				dropFromHead(level, villager, new ItemStack(ModItems.VILLAGER_NOSE));
 				properties.setNamed(PROPERTY_NOSE, new JsonPrimitive(false));
 				react(villager, player, TAKEN_NOSE, State.ADULT);
@@ -126,7 +126,7 @@ public final class VillagerItemReactions {
 			return;
 		}
 		if (stack.is(ModItems.VILLAGER_NOSE)) {
-			if (villager.isBaby()) {
+			if (Speakers.isBaby(villager)) {
 				return;
 			}
 			if (!hasNose) {
@@ -148,7 +148,7 @@ public final class VillagerItemReactions {
 		String item = itemPath(stack);
 		stack.consume(1, player);
 		properties.setNamed(PROPERTY_ACCESSORY, new JsonPrimitive(AddonNames.item(item)));
-		if (villager.isBaby()) {
+		if (Speakers.isBaby(villager)) {
 			react(villager, player, BABY_GIFT.get(item), State.BABY);
 		} else {
 			String special = ADULT_GIFT.get(item);

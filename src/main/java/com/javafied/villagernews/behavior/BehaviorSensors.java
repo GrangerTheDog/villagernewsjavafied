@@ -20,6 +20,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.villager.Villager;
 
@@ -73,6 +74,22 @@ public final class BehaviorSensors {
 	/** The behavior definition a Java villager stands in for, by its character. */
 	public static Definition definitionOf(Villager villager) {
 		return definitionOfCharacter(villager.getAttachedOrElse(ModAttachments.VILLAGER_VARIANT, VillagerVariantKeys.DEFAULT));
+	}
+
+	/**
+	 * Bedrock's {@code is_baby}: a Java baby, or a character its definition
+	 * makes a baby for good (the Mayor, who stays an adult in Java so he can
+	 * trade, but talks, cries out and is drawn as a baby).
+	 */
+	public static boolean isBaby(Entity entity) {
+		if (!(entity instanceof LivingEntity living)) {
+			return false;
+		}
+		if (living.isBaby()) {
+			return true;
+		}
+		Definition definition = entity instanceof Villager villager ? definitionOf(villager) : null;
+		return definition != null && definition.alwaysBaby();
 	}
 
 	/** A character's behavior definition, by its readable name ({@code mayor}). */

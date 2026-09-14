@@ -94,7 +94,7 @@ public final class TradeReactions {
 	public static void init() {
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			if (hand != InteractionHand.MAIN_HAND || !(level instanceof ServerLevel server) || !(entity instanceof Villager villager)
-					|| Speakers.kindOf(villager) != Kind.VILLAGER || villager.isBaby() || villager.isSleeping() || villager.isTrading()
+					|| Speakers.kindOf(villager) != Kind.VILLAGER || Speakers.isBaby(villager) || villager.isSleeping() || villager.isTrading()
 					|| !employed(villager) || player.isSecondaryUseActive() || DialogEngine.get() == null) {
 				return InteractionResult.PASS;
 			}

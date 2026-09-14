@@ -1,6 +1,7 @@
 package com.javafied.villagernews.behavior;
 
 import com.javafied.villagernews.dialog.DialogLibrary;
+import com.javafied.villagernews.names.AddonNames;
 
 import com.google.gson.JsonPrimitive;
 
@@ -50,6 +51,15 @@ class BehaviorDefinitionsTest {
 		}
 		assertTrue(requested >= 40);
 		assertTrue(requested - missing.size() >= 25, "missing dialogs: " + missing);
+	}
+
+	@Test
+	void theMayorIsABabyForGood() throws IOException {
+		Path dir = Path.of("dev/converted/server/entities");
+		assumeTrue(Files.isDirectory(dir), "no converted add-on");
+		BehaviorDefinitions definitions = BehaviorDefinitions.load(dir);
+		assertTrue(definitions.get(AddonNames.character("mayor")).alwaysBaby());
+		assertFalse(definitions.get("villager").alwaysBaby());
 	}
 
 	@Test

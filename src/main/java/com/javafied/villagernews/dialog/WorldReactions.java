@@ -298,7 +298,7 @@ public final class WorldReactions {
 			}
 			String dialog = item.getItem().isEnchanted() ? PICKS_UP_ENCHANTED_ARMOR : PICKS_UP_ARMOR;
 			boolean said = item.level().getEntitiesOfClass(Villager.class, item.getBoundingBox().inflate(ARMOR_REACH),
-							v -> Speakers.kindOf(v) == Speakers.Kind.VILLAGER && !v.isBaby() && !v.isSleeping()).stream()
+							v -> Speakers.kindOf(v) == Speakers.Kind.VILLAGER && !Speakers.isBaby(v) && !v.isSleeping()).stream()
 					.sorted(java.util.Comparator.comparingDouble(v -> v.distanceToSqr(item)))
 					.anyMatch(v -> Reactions.say(v, dialog, Options.DEFAULT.facing(item)));
 			if (said) {

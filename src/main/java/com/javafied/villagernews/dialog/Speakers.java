@@ -1,11 +1,11 @@
 package com.javafied.villagernews.dialog;
 
 import com.javafied.villagernews.behavior.BehaviorProperties;
+import com.javafied.villagernews.behavior.BehaviorSensors;
 import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.names.AddonNames;
 
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
@@ -58,8 +58,9 @@ public final class Speakers {
 		return !"false".equals(BehaviorProperties.read(entity, AddonNames.property("nose")));
 	}
 
+	/** Bedrock's {@code is_baby}, which counts the Mayor: see {@link BehaviorSensors#isBaby}. */
 	public static boolean isBaby(Entity entity) {
-		return entity instanceof LivingEntity living && living.isBaby();
+		return BehaviorSensors.isBaby(entity);
 	}
 
 	/** Ordinary villagers' profession, in Bedrock's names for the ones that differ ("none" for unemployed). */

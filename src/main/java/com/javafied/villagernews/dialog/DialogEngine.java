@@ -424,7 +424,7 @@ public final class DialogEngine {
 			return "not a line for " + (kind == null ? "this mob" : kind.name().toLowerCase(java.util.Locale.ROOT));
 		}
 		// The script's age check applies to ordinary villagers; the Mayor always counts as the "second voice".
-		State age = kind == Speakers.Kind.MAYOR || kind == Speakers.Kind.VILLAGER && speaker.isBaby() ? State.BABY
+		State age = kind == Speakers.Kind.MAYOR || kind == Speakers.Kind.VILLAGER && Speakers.isBaby(speaker) ? State.BABY
 				: kind == Speakers.Kind.VILLAGER ? State.ADULT : null;
 		if (age != null && !options.states().contains(age)) {
 			return age == State.BABY ? "a line for grown-ups" : "a line for babies";

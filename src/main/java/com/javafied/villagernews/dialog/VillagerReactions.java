@@ -173,7 +173,7 @@ public final class VillagerReactions {
 
 	/** Ordinary villagers: the odd calendar remark, else a chat with a neighbour or a comment. */
 	private static void villagerChatter(DialogEngine engine, Villager villager) {
-		if (villager.isBaby()) {
+		if (Speakers.isBaby(villager)) {
 			VillagerLifeReactions.babyAtPlay(villager);
 			return;
 		}
@@ -314,7 +314,7 @@ public final class VillagerReactions {
 				best = distance;
 			}
 		}
-		if (nearest == null || nearest.isBaby() || engine.isTalking(nearest) || conversations.containsKey(nearest)
+		if (nearest == null || Speakers.isBaby(nearest) || engine.isTalking(nearest) || conversations.containsKey(nearest)
 				|| !atWork(nearest)) {
 			return null;
 		}
@@ -416,8 +416,8 @@ public final class VillagerReactions {
 		if (speech != null && speech.dialog().tags().containsKey(TAG_NO_HURT_VOICE)) {
 			return;
 		}
-		if (keepsTalking || !engine.exclaim(villager, villager.isBaby() ? BABY_GETS_HURT : GETS_HURT)) {
-			String sound = pick(engine.library().hurtSounds(villager.isBaby()));
+		if (keepsTalking || !engine.exclaim(villager, Speakers.isBaby(villager) ? BABY_GETS_HURT : GETS_HURT)) {
+			String sound = pick(engine.library().hurtSounds(Speakers.isBaby(villager)));
 			if (sound != null) {
 				villager.level().playSound(null, villager.getX(), villager.getY(), villager.getZ(),
 						BedrockSoundIds.holder(sound), SoundSource.NEUTRAL, 1f, 1f);
