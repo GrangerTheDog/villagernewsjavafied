@@ -128,7 +128,7 @@ public final class VillagerReactions {
 			VillagerLifeReactions.babyAtPlay(villager);
 			return;
 		}
-		if (villager.getVehicle() instanceof AbstractBoat) {
+		if (villager.getVehicle() instanceof AbstractBoat || VillagerRoutineReactions.eveningGathering(engine, villager)) {
 			return;
 		}
 		if (ThreadLocalRandom.current().nextDouble() > 0.8) {
@@ -246,8 +246,14 @@ public final class VillagerReactions {
 		if (starters.isEmpty()) {
 			return;
 		}
-		List<String> parts = starters.get(ThreadLocalRandom.current().nextInt(starters.size()));
-		if (engine.speakNow(villager, parts.getFirst(), Options.DEFAULT.facing(partner))) {
+		startConversation(engine, villager, partner, starters.get(ThreadLocalRandom.current().nextInt(starters.size())).getFirst());
+	}
+
+	/** Starts the conversation beginning with this dialog (or just that one line, if it starts none). */
+	static void startConversation(DialogEngine engine, Villager villager, Villager partner, String first) {
+		List<String> parts = engine.library().conversations().stream().filter(c -> c.getFirst().equals(first)).findFirst()
+				.orElse(List.of(first));
+		if (engine.speakNow(villager, first, Options.DEFAULT.facing(partner))) {
 			Conversation conversation = new Conversation(villager, partner, parts);
 			conversations.put(villager, conversation);
 			conversations.put(partner, conversation);

@@ -11,6 +11,7 @@ import com.javafied.villagernews.dialog.BlockUseReactions;
 import com.javafied.villagernews.dialog.DialogPayloads;
 import com.javafied.villagernews.dialog.PlayerActionReactions;
 import com.javafied.villagernews.dialog.VillagerLifeReactions;
+import com.javafied.villagernews.dialog.VillagerRoutineReactions;
 import com.javafied.villagernews.dialog.VillagerItemReactions;
 import com.javafied.villagernews.dialog.VillagerReactions;
 
@@ -39,6 +40,7 @@ public class VillagerNewsJavafied implements ModInitializer {
 		PlayerActionReactions.init();
 		BlockUseReactions.init();
 		VillagerLifeReactions.init();
+		VillagerRoutineReactions.init();
 		BehaviorSensors.init();
 		VillagerItemReactions.init();
 		SpecialCharacters.init();
