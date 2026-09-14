@@ -1,5 +1,14 @@
 # Villager News: Javafied
 
+[![Build](https://github.com/GrangerTheDog/villagernewsjavafied/actions/workflows/build.yml/badge.svg)](https://github.com/GrangerTheDog/villagernewsjavafied/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/GrangerTheDog/villagernewsjavafied?label=release)](https://github.com/GrangerTheDog/villagernewsjavafied/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/GrangerTheDog/villagernewsjavafied/total)](https://github.com/GrangerTheDog/villagernewsjavafied/releases)
+[![Minecraft 26.2](https://img.shields.io/badge/Minecraft-26.2-62b47a)](https://www.minecraft.net)
+[![Fabric](https://img.shields.io/badge/loader-Fabric-dbd0b4)](https://fabricmc.net)
+[![Needs GeckoLib](https://img.shields.io/badge/needs-GeckoLib%205.5.5-8a2be2)](https://modrinth.com/mod/geckolib)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Made with AI](https://img.shields.io/badge/made%20with-AI%20%28Claude%29-d97757)](#ai-disclosure)
+
 A Fabric mod that brings **Villager News** by **Element Animation** to Minecraft Java Edition, by converting the Bedrock add-on by **Oreville Studios** on your own computer.
 
 ## Bring your own add-on
@@ -59,6 +68,12 @@ For development, extract the add-on into `dev/addon-src/`, then run `./gradlew r
 ## What's in this repository
 
 Only the mod's own code, plus the add-on's identifiers mapped to readable names. The add-on itself, and anything converted from it, stays out of the repository and out of the jar: `.gitignore` excludes `dev/` and `*.mcaddon`. Please keep it that way in contributions.
+
+## AI disclosure
+
+This mod was written with AI. Most of its code, and much of its documentation, was written by Claude (Anthropic's AI model) through Claude Code, with the maintainer directing the work, testing it in game and reviewing it. Commits Claude helped write say so in a `Co-Authored-By: Claude` line.
+
+To build the converter, the AI read a local copy of the add-on the maintainer owns. None of the add-on's content was copied into this repository or the jar (see [What's in this repository](#whats-in-this-repository)).
 
 ## License
 
