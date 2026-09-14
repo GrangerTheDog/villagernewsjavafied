@@ -115,6 +115,10 @@ public final class PlayerActionReactions {
 	private static final String MANY_EFFECTS = "fqbjfv";
 	private static final String STANDING_STILL = "zsmvzb";
 	private static final int STANDING_STILL_TICKS = 2400;
+	private static final String TRAMPLED_CROPS = "pizztd";
+	private static final String ATE_FOOD = "akerwb";
+	private static final String SHEARED_SHEEP = "edrtbe";
+	private static final String USED_LEAD = "elexev";
 	private static final String STARING = "cavwps";
 	private static final double STARE_RANGE = 8;
 	private static final double STARE_CONE = 0.97;
@@ -161,6 +165,34 @@ public final class PlayerActionReactions {
 			}
 		});
 		ServerTickEvents.END_SERVER_TICK.register(PlayerActionReactions::tick);
+		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (hand == net.minecraft.world.InteractionHand.MAIN_HAND && level instanceof ServerLevel server
+					&& player.getItemInHand(hand).is(net.minecraft.world.item.Items.LEAD)) {
+				if (entity instanceof LivingEntity living && Speakers.kindOf(living) != null) {
+					Reactions.say(living, USED_LEAD, toward(player));
+				} else if (entity instanceof net.minecraft.world.entity.Leashable) {
+					Reactions.nearest(server, player.position(), USED_LEAD, toward(player));
+				}
+			}
+			return net.minecraft.world.InteractionResult.PASS;
+		});
+	}
+
+	/** Called (through a mixin) when farmland under a crop is trampled back to dirt. */
+	public static void trampled(ServerLevel level, BlockPos farmland) {
+		Reactions.nearest(level, Vec3.atCenterOf(farmland), TRAMPLED_CROPS, Options.DEFAULT.facing(Vec3.atCenterOf(farmland.above())));
+	}
+
+	/** Called (through a mixin) when a player finishes eating. */
+	public static void ate(ServerPlayer player) {
+		Reactions.nearest(player.level(), player.position(), ATE_FOOD, toward(player));
+	}
+
+	/** Called (through a mixin) when an ordinary sheep is sheared. */
+	public static void sheared(ServerLevel level, LivingEntity sheep) {
+		if (Speakers.kindOf(sheep) == null) {
+			Reactions.nearest(level, sheep.position(), SHEARED_SHEEP, Options.DEFAULT.facing(sheep));
+		}
 	}
 
 	private static Options toward(Player player) {

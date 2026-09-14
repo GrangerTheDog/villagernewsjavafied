@@ -56,7 +56,7 @@ class DialogLibraryTest {
 	void portedTriggersReferenceRealDialogs() throws ReflectiveOperationException {
 		List<String> ids = new ArrayList<>();
 		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class,
-				PlayerActionReactions.class, VillagerLifeReactions.class)) {
+				PlayerActionReactions.class, VillagerLifeReactions.class, BlockUseReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
 				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
 						|| field.getName().equals("NOSED_CONVERSATIONS") || field.getName().equals("TRADE_DIALOGS")) {

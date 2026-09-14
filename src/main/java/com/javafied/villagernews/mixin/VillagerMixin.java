@@ -32,8 +32,17 @@ abstract class VillagerMixin {
 	@Inject(method = "finalizeSpawn", at = @At("HEAD"))
 	private void villagernewsjavafied$markVillageVillager(ServerLevelAccessor level, DifficultyInstance difficulty,
 			EntitySpawnReason reason, SpawnGroupData data, CallbackInfoReturnable<SpawnGroupData> cir) {
+		Villager self = (Villager) (Object) this;
 		if (reason == EntitySpawnReason.STRUCTURE) {
-			((Villager) (Object) this).setAttached(ModAttachments.FROM_VILLAGE_GENERATION, true);
+			self.setAttached(ModAttachments.FROM_VILLAGE_GENERATION, true);
+		} else if ((reason == EntitySpawnReason.SPAWN_ITEM_USE || reason == EntitySpawnReason.COMMAND
+				|| reason == EntitySpawnReason.DISPENSER) && level.getLevel().getServer() != null) {
+			var server = level.getLevel().getServer();
+			server.schedule(new TickTask(server.getTickCount() + 1, () -> {
+				if (self.isAlive() && self.level().getEntity(self.getId()) == self) {
+					VillagerLifeReactions.spawnedByPlayer(self);
+				}
+			}));
 		}
 	}
 

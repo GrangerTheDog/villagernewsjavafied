@@ -5,6 +5,9 @@
 	"mixins": [
 		"AbstractVillagerMixin",
 		"BlockItemMixin",
+		"FarmlandBlockMixin",
+		"LivingEntityMixin",
+		"SheepMixin",
 		"ServerPlayerMixin",
 		"VillagerMixin"
 	],
