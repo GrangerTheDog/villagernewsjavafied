@@ -12,6 +12,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.npc.villager.Villager;
@@ -121,7 +122,7 @@ public final class VillagerReactions {
 		ServerTickEvents.END_SERVER_TICK.register(VillagerReactions::tick);
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
 			if (entity instanceof Villager villager && damageTaken > 0) {
-				hurt(villager);
+				hurt(villager, source);
 			}
 		});
 		DialogEngine.onFinished(VillagerReactions::continueConversation);
@@ -402,12 +403,12 @@ public final class VillagerReactions {
 	 * animation wrongly, so in Bedrock the mouth never moves; saying the line
 	 * itself - the same recording - restores that, with its subtitle.
 	 */
-	private static void hurt(Villager villager) {
+	private static void hurt(Villager villager, DamageSource source) {
 		DialogEngine engine = DialogEngine.get();
 		if (engine == null || !villager.isAlive()) {
 			return;
 		}
-		engine.markHurt(villager);
+		engine.markHurt(villager, source);
 		Speech speech = engine.speech(villager);
 		boolean keepsTalking = speech != null && speech.dialog().tags().containsKey(TAG_KEEPS_TALKING);
 		if (speech != null && !keepsTalking) {

@@ -1,6 +1,7 @@
 package com.javafied.villagernews.behavior;
 
 import com.javafied.villagernews.VillagerNewsJavafied;
+import com.javafied.villagernews.dialog.DialogEngine;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -155,6 +156,8 @@ public final class BedrockFilters {
 					stack -> itemId(stack).equals(qualified(value.getAsString()))), operator, true);
 			case "has_equipment_tag" -> compare(living != null && anyEquipment(living, domain,
 					stack -> hasTag(stack, value.getAsString())), operator, true);
+			// Java has one panic for both: fleeing danger, and keeping away from mobs (or the Untouchable from players).
+			case "is_panicking", "is_avoiding_mobs" -> compare(living != null && DialogEngine.panicking(living), operator, value);
 			// A merchant with something left to sell (the wandering trader notices when it's sold out).
 			case "has_trade_supply" -> compare(subject instanceof AbstractVillager merchant
 					&& merchant.getOffers().stream().anyMatch(offer -> !offer.isOutOfStock()), operator, value);

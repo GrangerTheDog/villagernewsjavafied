@@ -35,6 +35,7 @@ public final class VillagerLifeReactions {
 	private static final String BABY_SPRINTS_WEEKEND = "baby_sprints_on_the_weekend";
 	private static final String BABIES_PLAY_CHASE = "play_chase";
 	private static final String SAW_SOMETHING_HURT = "see_another_entity_get_hurt";
+	private static final String VILLAGER_DIES = "villager_dies";
 	private static final String SAW_VILLAGER_DIE = "see_another_villager_die";
 	private static final String IRON_GOLEM_FIGHTS_PLAYER = "iron_golem_targets_the_player";
 	private static final String BABY_ASKED_TO_TRADE = "try_to_trade_with_a_baby_villager";
@@ -75,6 +76,15 @@ public final class VillagerLifeReactions {
 						Options.DEFAULT.facing(player).ignoringCooldowns(false, false, true));
 			}
 			Reactions.nearest(level, entity.position(), SAW_SOMETHING_HURT, Options.DEFAULT.facing(entity), Reactions.NEARBY, entity);
+		});
+		// The add-on's handbook lists a dying villager's final reaction (a gasp, or a laugh), but its script never plays it.
+		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
+			Speakers.Kind kind = Speakers.kindOf(entity);
+			DialogEngine engine = DialogEngine.get();
+			if (engine != null && entity instanceof Villager && kind != null) {
+				engine.exclaim(entity, VILLAGER_DIES);
+			}
+			return true;
 		});
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity.level() instanceof ServerLevel level && Speakers.kindOf(entity) != null && Speakers.kindOf(entity) != Speakers.Kind.WOOLY) {

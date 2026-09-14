@@ -19,6 +19,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -197,6 +198,7 @@ public final class DialogEngine {
 	private final Cooldowns global = new Cooldowns();
 	private final Map<Entity, Cooldowns> speakerCooldowns = new WeakHashMap<>();
 	private final Map<Entity, Long> lastHurt = new WeakHashMap<>();
+	private final Map<Entity, Boolean> talksWhileFleeing = new WeakHashMap<>();
 	private final Map<Entity, Speech> speeches = new HashMap<>();
 	private final Map<String, Integer> lastLine = new HashMap<>();
 	private final Set<String> warnedMissing = new java.util.HashSet<>();
@@ -406,9 +408,15 @@ public final class DialogEngine {
 				&& cooldownBlocking(speaker, dialog, options) == null;
 	}
 
-	/** Villagers keep quiet for 2 seconds after being hurt. */
-	public void markHurt(Entity speaker) {
+	/**
+	 * Villagers keep quiet for 2 seconds after being hurt. And, as the script
+	 * has it, one last hurt by a player, a projectile or the world (not a mob)
+	 * may still talk while it runs away.
+	 */
+	public void markHurt(Entity speaker, DamageSource source) {
 		lastHurt.put(speaker, now());
+		Entity attacker = source.getEntity();
+		talksWhileFleeing.put(speaker, attacker == null || source.getDirectEntity() != attacker || attacker instanceof Player);
 	}
 
 	/** The script's per-speaker checks ({@code ihylcx}): age, sleep, danger. Null if it may talk, else why not. */
@@ -434,6 +442,10 @@ public final class DialogEngine {
 		}
 		if (options.states().contains(State.EVEN_IN_DANGER)) {
 			return null;
+		}
+		// The script turns away every other line while a villager is running from something (its panicking property).
+		if (panicking(speaker) && !Boolean.TRUE.equals(talksWhileFleeing.get(speaker))) {
+			return "running away";
 		}
 		Long hurt = lastHurt.get(speaker);
 		if (hurt != null && now() <= hurt + HURT_SILENCE_TICKS) {
@@ -553,9 +565,14 @@ public final class DialogEngine {
 
 	/** Panicking, keeping away from something, or hit a moment ago (it's about to panic). */
 	private static boolean fleeing(LivingEntity speaker) {
-		return Boolean.TRUE.equals(speaker.getAttached(ModAttachments.AVOIDING))
-				|| speaker instanceof Villager villager && villager.getBrain().isActive(Activity.PANIC)
+		return panicking(speaker)
 				|| speaker.getLastHurtByMob() != null && speaker.tickCount - speaker.getLastHurtByMobTimestamp() < RECENTLY_HURT_TICKS;
+	}
+
+	/** Running from something: panicking, or keeping away (Bedrock's is_panicking / is_avoiding_mobs). */
+	public static boolean panicking(LivingEntity speaker) {
+		return Boolean.TRUE.equals(speaker.getAttached(ModAttachments.AVOIDING))
+				|| speaker instanceof Villager villager && villager.getBrain().isActive(Activity.PANIC);
 	}
 
 	/** On the ground (or riding), head above water. */
@@ -615,12 +632,13 @@ public final class DialogEngine {
 
 	/**
 	 * A line blurted out on the spot, with none of the engine's bookkeeping -
-	 * no queue, cooldowns or standing still: the hurt voices. False if the
+	 * no queue, cooldowns or standing still: the hurt voices, and a dying
+	 * villager's last gasp (so a speaker at 0 health still may). False if the
 	 * add-on has no such dialog.
 	 */
 	public boolean exclaim(LivingEntity speaker, String dialogId) {
 		Dialog dialog = dialog(dialogId);
-		if (dialog == null || dialog.lines().isEmpty() || !speaker.isAlive()) {
+		if (dialog == null || dialog.lines().isEmpty() || speaker.isRemoved()) {
 			return false;
 		}
 		int index = pickLine(dialog);
