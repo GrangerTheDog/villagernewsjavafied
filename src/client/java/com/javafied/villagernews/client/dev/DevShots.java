@@ -86,6 +86,9 @@ public final class DevShots {
 			mannequin(180);
 			talk(true);
 		}));
+		steps.add(new Step("modmenu", () -> Minecraft.getInstance().setScreenAndShow(
+				new com.terraformersmc.modmenu.gui.ModsScreen(null))));
+		steps.add(new Step("modmenu-closed", () -> Minecraft.getInstance().setScreenAndShow(null)));
 		steps.add(new Step("sleep", DevShots::sleep));
 		steps.add(new Step("sleep-wake", () -> onServer(player -> player.level().getEntitiesOfClass(
 				net.minecraft.world.entity.npc.villager.Villager.class, player.getBoundingBox().inflate(8)).forEach(

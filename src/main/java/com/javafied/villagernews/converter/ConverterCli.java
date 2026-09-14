@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,9 @@ public final class ConverterCli {
 	 * Bump whenever the converter's output changes shape, so packs converted by
 	 * an older version of the mod get re-converted automatically.
 	 */
-	public static final int SCHEMA_VERSION = 12;
+	public static final int SCHEMA_VERSION = 13;
+	/** The converted pack's icon (Java's name for a pack icon). */
+	public static final String PACK_ICON = "pack.png";
 
 	private ConverterCli() {
 	}
@@ -77,6 +80,7 @@ public final class ConverterCli {
 		writeManifest(outputDir, addon.version, geometryIndex, textureCount, soundCount, langKeyCount, skipped);
 		writeSkipReport(outputDir, skipped);
 		writePackMcmeta(outputDir);
+		copyPackIcon(addon.resourcePack, outputDir);
 
 		System.out.println("Geometries converted: " + geometryIndex.size());
 		System.out.println("Textures converted: " + textureCount);
@@ -142,6 +146,18 @@ public final class ConverterCli {
 		JsonObject root = new JsonObject();
 		root.add("pack", pack);
 		ConverterUtil.writeJson(outputDir.resolve("pack.mcmeta"), root);
+	}
+
+	/**
+	 * The add-on's own icon, as the converted pack's: shown in the resource
+	 * pack list, and by Mod Menu for this mod (it lives only in the player's
+	 * converted pack, never in the mod).
+	 */
+	private static void copyPackIcon(Path resourcePack, Path outputDir) throws IOException {
+		Path icon = resourcePack == null ? null : resourcePack.resolve("pack_icon.png");
+		if (icon != null && Files.isRegularFile(icon)) {
+			Files.copy(icon, outputDir.resolve(PACK_ICON), StandardCopyOption.REPLACE_EXISTING);
+		}
 	}
 
 	private static void deleteRecursive(Path dir) throws IOException {

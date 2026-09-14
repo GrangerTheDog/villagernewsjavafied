@@ -5,7 +5,7 @@
 	"name": "Villager News: Javafied",
 	"description": "Brings Element Animation's Villager News to Java Edition via an automatic, on-device conversion of your own legally-owned copy of the Bedrock add-on. Ships with none of the add-on's own content.",
 	"authors": [
-		"zuidweg50"
+		"GrangerTheDog"
 	],
 	"contact": {
 		"sources": "https://github.com/GrangerTheDog/villagernewsjavafied"
@@ -24,6 +24,10 @@
 		"villagernewsjavafied.mixins.json",
 		{
 			"config": "villagernewsjavafied.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "villagernewsjavafied.modmenu.mixins.json",
 			"environment": "client"
 		}
 	],

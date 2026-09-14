@@ -14,6 +14,15 @@ repositories {
 		}
 		filter { includeGroupAndSubgroups('com.geckolib') }
 	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'TerraformersMC'
+				url = 'https://maven.terraformersmc.com/releases/'
+			}
+		}
+		filter { includeGroup('com.terraformersmc') }
+	}
 }
 
 loom {
@@ -46,6 +55,10 @@ dependencies {
 		exclude group: "org.javassist"
 	}
 	include "team.unnamed:mocha:3.0.1"
+
+	// Mod Menu, optional: shown with the converted add-on's icon when it's installed (see ModMenuIconMixin).
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	testImplementation "org.junit.jupiter:junit-jupiter:6.1.3"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:6.1.3"

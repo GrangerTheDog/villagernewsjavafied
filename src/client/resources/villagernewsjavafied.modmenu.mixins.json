@@ -1,0 +1,11 @@
+{
+	"required": false,
+	"package": "com.javafied.villagernews.mixin.modmenu",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ModMenuIconMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}
