@@ -104,6 +104,10 @@ public final class DialogEngine {
 	private record Request(LivingEntity speaker, Dialog dialog, Options options, long expires) {
 	}
 
+	/** Why a speaker's last request didn't turn into a line - for the debug view. */
+	private record Refusal(String dialog, String reason, long tick) {
+	}
+
 	/** Blocked-until ticks. */
 	private static final class Cooldowns {
 		long any;
@@ -137,6 +141,7 @@ public final class DialogEngine {
 	private final Map<Entity, Long> lastHurt = new WeakHashMap<>();
 	private final Map<Entity, Speech> speeches = new HashMap<>();
 	private final Map<String, Integer> lastLine = new HashMap<>();
+	private final Map<Entity, Refusal> lastRefusal = new WeakHashMap<>();
 	private final List<Request> queue = new ArrayList<>();
 	private long lastStart = -START_GAP_TICKS;
 
@@ -189,17 +194,27 @@ public final class DialogEngine {
 	 */
 	public boolean request(LivingEntity speaker, String dialogId, Options options) {
 		Dialog dialog = library.get(dialogId);
-		if (dialog == null || !mayTalk(speaker, options) || coolingDown(speaker, dialog, options)) {
-			return false;
+		String refusal = dialog == null ? "not in the add-on" : whyNot(speaker, options);
+		if (refusal == null) {
+			refusal = cooldownBlocking(speaker, dialog, options);
+		}
+		if (refusal != null) {
+			return refuse(speaker, dialogId, refusal);
 		}
 		queue.add(new Request(speaker, dialog, options, now() + REQUEST_TIMEOUT));
 		return true;
 	}
 
+	private boolean refuse(Entity speaker, String dialogId, String reason) {
+		lastRefusal.put(speaker, new Refusal(dialogId, reason, now()));
+		return false;
+	}
+
 	/** Starts {@code dialogId} right away if it can, skipping the queue (replies in a conversation). */
 	public boolean speakNow(LivingEntity speaker, String dialogId, Options options) {
 		Dialog dialog = library.get(dialogId);
-		return dialog != null && mayTalk(speaker, options) && start(speaker, dialog, options);
+		String refusal = dialog == null ? "not in the add-on" : whyNot(speaker, options);
+		return refusal == null ? start(speaker, dialog, options) : refuse(speaker, dialogId, refusal);
 	}
 
 	/** What the speaker is currently saying, if anything. */
@@ -226,51 +241,111 @@ public final class DialogEngine {
 		LISTENERS.forEach(listener -> listener.accept(speech, false));
 	}
 
+	/** A few lines about the speaker's dialog state, for the debug view. */
+	public List<String> describe(LivingEntity speaker) {
+		long now = now();
+		List<String> lines = new ArrayList<>();
+		Speech speech = speeches.get(speaker);
+		if (speech != null && speech.talking(now)) {
+			lines.add("Talking: " + speech.dialog().id() + " (line " + (speech.line() + 1) + " of "
+					+ speech.dialog().lines().size() + ", " + seconds(speech.endTick() - now) + " left)");
+		} else {
+			lines.add("Quiet (" + speakers() + " of " + MAX_SPEAKERS + " villagers talking nearby)");
+		}
+		Cooldowns own = speakerCooldowns.get(speaker);
+		List<String> cooldowns = new ArrayList<>();
+		if (own != null) {
+			if (own.any > now) {
+				cooldowns.add("any " + seconds(own.any - now));
+			}
+			own.dialogs.forEach((id, until) -> {
+				if (until > now) {
+					cooldowns.add(id + " " + seconds(until - now));
+				}
+			});
+			own.tags.forEach((tag, until) -> {
+				if (until > now) {
+					cooldowns.add("tag " + tag + " " + seconds(until - now));
+				}
+			});
+		}
+		lines.add(cooldowns.isEmpty() ? "No cooldowns" : "Cooldowns: " + String.join(", ", cooldowns));
+		List<String> waiting = new ArrayList<>();
+		for (Request request : queue) {
+			if (request.speaker() == speaker) {
+				waiting.add(request.dialog().id() + " " + seconds(request.expires() - now));
+			}
+		}
+		if (!waiting.isEmpty()) {
+			lines.add("Waiting: " + String.join(", ", waiting));
+		}
+		Refusal refusal = lastRefusal.get(speaker);
+		if (refusal != null) {
+			lines.add("Last refused: " + refusal.dialog() + " - " + refusal.reason() + " (" + seconds(now - refusal.tick()) + " ago)");
+		}
+		return lines;
+	}
+
+	private static String seconds(long ticks) {
+		return String.format(java.util.Locale.ROOT, "%.1fs", ticks / 20.0);
+	}
+
 	/** Villagers keep quiet for 2 seconds after being hurt. */
 	public void markHurt(Entity speaker) {
 		lastHurt.put(speaker, now());
 	}
 
-	/** The script's per-speaker checks ({@code ihylcx}): age, sleep, danger. */
-	private boolean mayTalk(LivingEntity speaker, Options options) {
+	/** The script's per-speaker checks ({@code ihylcx}): age, sleep, danger. Null if it may talk, else why not. */
+	private String whyNot(LivingEntity speaker, Options options) {
 		if (!speaker.isAlive()) {
-			return false;
+			return "dead";
 		}
 		if (!options.states().contains(speaker.isBaby() ? State.BABY : State.ADULT)) {
-			return false;
+			return speaker.isBaby() ? "a line for adults" : "a line for babies";
 		}
 		if (speaker.isSleeping() && !options.states().contains(State.SLEEPING)) {
-			return false;
+			return "asleep";
 		}
 		if (options.states().contains(State.EVEN_IN_DANGER)) {
-			return true;
+			return null;
 		}
 		Long hurt = lastHurt.get(speaker);
 		if (hurt != null && now() <= hurt + HURT_SILENCE_TICKS) {
-			return false;
+			return "just got hurt";
 		}
-		return speaker.level().getEntitiesOfClass(Mob.class, speaker.getBoundingBox().inflate(MONSTER_RADIUS),
+		boolean monster = !speaker.level().getEntitiesOfClass(Mob.class, speaker.getBoundingBox().inflate(MONSTER_RADIUS),
 				mob -> mob instanceof Enemy && mob.distanceTo(speaker) <= MONSTER_RADIUS).isEmpty();
+		return monster ? "monster nearby" : null;
 	}
 
-	private boolean coolingDown(LivingEntity speaker, Dialog dialog, Options options) {
+	/** Null if no cooldown blocks this dialog for this speaker, else which one does. */
+	private String cooldownBlocking(LivingEntity speaker, Dialog dialog, Options options) {
 		long now = now();
 		Cooldowns own = speakerCooldowns.get(speaker);
-		if (!options.ignoreEntityCooldown() && own != null
-				&& (own.any > now || own.dialogs.getOrDefault(dialog.id(), 0L) > now)) {
-			return true;
+		if (!options.ignoreEntityCooldown() && own != null) {
+			if (own.any > now) {
+				return "speaker cooldown";
+			}
+			if (own.dialogs.getOrDefault(dialog.id(), 0L) > now) {
+				return "speaker cooldown for this dialog";
+			}
 		}
-		if (!options.ignoreGlobalCooldown() && (global.any > now || global.dialogs.getOrDefault(dialog.id(), 0L) > now)) {
-			return true;
+		if (!options.ignoreGlobalCooldown()) {
+			if (global.any > now) {
+				return "world cooldown";
+			}
+			if (global.dialogs.getOrDefault(dialog.id(), 0L) > now) {
+				return "world cooldown for this dialog";
+			}
 		}
 		if (!options.ignoreTagCooldown()) {
 			for (String tag : dialog.tags().keySet()) {
 				if (global.tags.getOrDefault(tag, 0L) > now || own != null && own.tags.getOrDefault(tag, 0L) > now) {
-					return true;
+					return "cooldown on tag " + tag;
 				}
 			}
 		}
-		return false;
+		return null;
 	}
 
 	private void tick() {
@@ -319,6 +394,9 @@ public final class DialogEngine {
 			LivingEntity speaker = request.speaker();
 			if (now >= request.expires() || !speaker.isAlive()) {
 				it.remove();
+				if (speaker.isAlive()) {
+					refuse(speaker, request.dialog().id(), "gave up waiting for its turn");
+				}
 				continue;
 			}
 			boolean paced = request.options().urgent() || now - lastStart >= START_GAP_TICKS && speakers() < MAX_SPEAKERS;
@@ -345,25 +423,29 @@ public final class DialogEngine {
 		long now = now();
 		if (isTalking(speaker)) {
 			if (!options.interrupt()) {
-				return false;
+				return refuse(speaker, dialog.id(), "already talking");
 			}
 			stop(speaker);
 		}
 		ServerLevel level = (ServerLevel) speaker.level();
 		Player nearest = level.getNearestPlayer(speaker, RANGE);
-		if (nearest == null || coolingDown(speaker, dialog, options)) {
-			return false;
+		if (nearest == null) {
+			return refuse(speaker, dialog.id(), "no player within " + (int) RANGE + " blocks");
+		}
+		String cooldown = cooldownBlocking(speaker, dialog, options);
+		if (cooldown != null) {
+			return refuse(speaker, dialog.id(), cooldown);
 		}
 		if (!options.interrupt()) {
 			if (speakers() >= MAX_SPEAKERS) {
-				return false;
+				return refuse(speaker, dialog.id(), MAX_SPEAKERS + " villagers already talking");
 			}
 			if (nearest.distanceTo(speaker) < LISTENER_RADIUS && someoneElseTalkingNear(nearest, speaker)) {
-				return false;
+				return refuse(speaker, dialog.id(), "someone else is talking to that player");
 			}
 		}
 		if (global.any > now) {
-			return false;
+			return refuse(speaker, dialog.id(), "world cooldown");
 		}
 
 		int index = pickLine(dialog);

@@ -68,8 +68,32 @@ public final class DialogPayloads {
 		}
 	}
 
+	/** The debug view: what the villager a player looks at is up to (no lines: nothing in view / debug off). */
+	public record Debug(List<String> lines) implements CustomPacketPayload {
+		public static final Type<Debug> TYPE = new Type<>(VillagerNewsJavafied.id("dialog_debug"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Debug> CODEC = StreamCodec.ofMember(
+				(debug, buf) -> {
+					buf.writeVarInt(debug.lines.size());
+					debug.lines.forEach(buf::writeUtf);
+				},
+				buf -> {
+					int count = buf.readVarInt();
+					List<String> lines = new ArrayList<>(count);
+					for (int i = 0; i < count; i++) {
+						lines.add(buf.readUtf());
+					}
+					return new Debug(lines);
+				});
+
+		@Override
+		public Type<Debug> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
 		PayloadTypeRegistry.clientboundPlay().register(Line.TYPE, Line.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Stop.TYPE, Stop.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Debug.TYPE, Debug.CODEC);
 	}
 }

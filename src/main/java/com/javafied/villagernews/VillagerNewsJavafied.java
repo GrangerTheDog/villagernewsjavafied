@@ -5,6 +5,7 @@ import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
 import com.javafied.villagernews.content.SpecialCharacters;
 import com.javafied.villagernews.content.VillagerCommand;
+import com.javafied.villagernews.dialog.DialogDebug;
 import com.javafied.villagernews.dialog.DialogEngine;
 import com.javafied.villagernews.dialog.DialogPayloads;
 import com.javafied.villagernews.dialog.VillagerItemReactions;
@@ -30,6 +31,7 @@ public class VillagerNewsJavafied implements ModInitializer {
 		VillagerCommand.init();
 		DialogPayloads.register();
 		DialogEngine.init();
+		DialogDebug.init();
 		VillagerReactions.init();
 		BehaviorSensors.init();
 		VillagerItemReactions.init();

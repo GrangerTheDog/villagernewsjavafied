@@ -31,6 +31,7 @@ public class VillagerNewsJavafiedClient implements ClientModInitializer {
 		MolangProgram.setErrorReporter(VillagerNewsJavafied.LOGGER::warn);
 		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(BedrockDefinitions.ID, new BedrockDefinitions());
 		DialogClient.init();
+		DialogDebugOverlay.init();
 
 		// Wooly is drawn through VariantRenderers, so ordinary sheep keep vanilla's renderer.
 		// The add-on turns every wandering trader into its own character.
