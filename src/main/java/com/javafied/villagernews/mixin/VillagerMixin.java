@@ -3,6 +3,7 @@ package com.javafied.villagernews.mixin;
 import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.SpecialTrades;
 import com.javafied.villagernews.dialog.VillagerLifeReactions;
+import com.javafied.villagernews.dialog.WorldReactions;
 
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
@@ -10,7 +11,9 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.ServerLevelAccessor;
 
@@ -66,6 +69,27 @@ abstract class VillagerMixin {
 				}
 			}));
 		}
+	}
+
+	@Inject(method = "pickUpItem", at = @At("HEAD"))
+	private void villagernewsjavafied$pickedUp(ServerLevel level, ItemEntity item, CallbackInfo ci) {
+		WorldReactions.pickedUp((Villager) (Object) this, item);
+	}
+
+	@Inject(method = "setVillagerData", at = @At("HEAD"))
+	private void villagernewsjavafied$professionChanged(VillagerData data, CallbackInfo ci) {
+		Villager self = (Villager) (Object) this;
+		if (self.level() instanceof ServerLevel && self.tickCount > 0) {
+			String before = profession(self.getVillagerData());
+			String after = profession(data);
+			if (!before.equals(after)) {
+				WorldReactions.professionChanged(self, before, after);
+			}
+		}
+	}
+
+	private static String profession(VillagerData data) {
+		return data.profession().unwrapKey().map(k -> k.identifier().getPath()).orElse("none");
 	}
 
 	@Inject(method = "updateTrades", at = @At("HEAD"), cancellable = true)

@@ -76,15 +76,22 @@ public final class DialogEngine {
 	 * @param facingPos            or where it looks, if not at an entity
 	 * @param urgent               skip the "3 speakers / 10 ticks apart" pacing
 	 * @param timeout              ticks the request may wait for its turn
+	 * @param ready                while queued, only starts once this holds (null: any time)
 	 */
 	public record Options(Set<State> states, Set<Speakers.Kind> kinds, boolean interrupt, boolean ignoreEntityCooldown,
-			boolean ignoreGlobalCooldown, boolean ignoreTagCooldown, Entity facing, Vec3 facingPos, boolean urgent, int timeout) {
+			boolean ignoreGlobalCooldown, boolean ignoreTagCooldown, Entity facing, Vec3 facingPos, boolean urgent, int timeout,
+			java.util.function.Predicate<LivingEntity> ready) {
 		public static final Options DEFAULT = new Options(EnumSet.of(State.ADULT), Speakers.DEFAULT_KINDS, false, false, false,
-				false, null, null, false, 40);
+				false, null, null, false, 40, null);
+
+		public Options readyWhen(java.util.function.Predicate<LivingEntity> condition) {
+			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
+					facingPos, urgent, timeout, condition);
+		}
 
 		public Options withStates(State first, State... rest) {
 			return new Options(EnumSet.of(first, rest), kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown,
-					ignoreTagCooldown, facing, facingPos, urgent, timeout);
+					ignoreTagCooldown, facing, facingPos, urgent, timeout, ready);
 		}
 
 		/** Also allowed while asleep / also allowed when in danger. */
@@ -92,7 +99,7 @@ public final class DialogEngine {
 			EnumSet<State> more = EnumSet.copyOf(states);
 			more.add(extra);
 			return new Options(more, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
-					facingPos, urgent, timeout);
+					facingPos, urgent, timeout, ready);
 		}
 
 		public Options withKinds(Speakers.Kind first, Speakers.Kind... rest) {
@@ -101,26 +108,26 @@ public final class DialogEngine {
 
 		public Options withKinds(Set<Speakers.Kind> allowed) {
 			return new Options(states, Set.copyOf(allowed), interrupt, ignoreEntityCooldown, ignoreGlobalCooldown,
-					ignoreTagCooldown, facing, facingPos, urgent, timeout);
+					ignoreTagCooldown, facing, facingPos, urgent, timeout, ready);
 		}
 
 		public Options facing(Entity target) {
 			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, target,
-					null, urgent, timeout);
+					null, urgent, timeout, ready);
 		}
 
 		public Options facing(Vec3 position) {
 			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, null,
-					position, urgent, timeout);
+					position, urgent, timeout, ready);
 		}
 
 		public Options ignoringCooldowns(boolean entity, boolean global, boolean tags) {
-			return new Options(states, kinds, interrupt, entity, global, tags, facing, facingPos, urgent, timeout);
+			return new Options(states, kinds, interrupt, entity, global, tags, facing, facingPos, urgent, timeout, ready);
 		}
 
 		public Options interrupting() {
 			return new Options(states, kinds, true, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
-					facingPos, urgent, timeout);
+					facingPos, urgent, timeout, ready);
 		}
 
 		/** The script's "all four flags": ignore every cooldown and cut off whatever is being said. */
@@ -130,12 +137,12 @@ public final class DialogEngine {
 
 		public Options asUrgent() {
 			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
-					facingPos, true, timeout);
+					facingPos, true, timeout, ready);
 		}
 
 		public Options waitingAtMost(int ticks) {
 			return new Options(states, kinds, interrupt, ignoreEntityCooldown, ignoreGlobalCooldown, ignoreTagCooldown, facing,
-					facingPos, urgent, ticks);
+					facingPos, urgent, ticks, ready);
 		}
 	}
 
@@ -337,6 +344,13 @@ public final class DialogEngine {
 		return String.format(java.util.Locale.ROOT, "%.1fs", ticks / 20.0);
 	}
 
+	/** Free to strike up something new: not talking, and no "any dialog" cooldown running. */
+	public boolean idle(LivingEntity speaker) {
+		long now = now();
+		Cooldowns own = speakerCooldowns.get(speaker);
+		return !isTalking(speaker) && global.any <= now && (own == null || own.any <= now);
+	}
+
 	/** When this speaker last said this dialog (0 if never). */
 	public long lastSaid(Entity speaker, String dialogId) {
 		Map<String, Long> said = lastSaid.get(speaker);
@@ -476,7 +490,8 @@ public final class DialogEngine {
 				continue;
 			}
 			boolean paced = request.options().urgent() || now - lastStart >= START_GAP_TICKS && speakers() < MAX_SPEAKERS;
-			if (paced && steady(speaker) && start(speaker, request.dialog(), request.options())) {
+			boolean ready = request.options().ready() == null || request.options().ready().test(speaker);
+			if (paced && ready && steady(speaker) && start(speaker, request.dialog(), request.options())) {
 				it.remove();
 			}
 		}

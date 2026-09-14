@@ -73,8 +73,11 @@ public final class VillagerReactions {
 	private static final Map<Villager, Conversation> conversations = new WeakHashMap<>();
 	private static final Map<Villager, Long> lastConversation = new WeakHashMap<>();
 
-	/** Two villagers taking turns through a conversation's parts. */
-	private record Conversation(Villager first, Villager second, List<String> parts) {
+	/**
+	 * Two villagers taking turns through a conversation's parts; the parts at
+	 * {@code sameSpeaker} indexes are said by whoever said the part before.
+	 */
+	private record Conversation(Villager first, Villager second, List<String> parts, Set<Integer> sameSpeaker) {
 		Villager other(Villager v) {
 			return v == first ? second : first;
 		}
@@ -126,6 +129,9 @@ public final class VillagerReactions {
 	private static void chatter(DialogEngine engine, Villager villager) {
 		if (villager.isBaby()) {
 			VillagerLifeReactions.babyAtPlay(villager);
+			return;
+		}
+		if (WorldReactions.headingHome(villager)) {
 			return;
 		}
 		if (villager.getVehicle() instanceof AbstractBoat || VillagerRoutineReactions.eveningGathering(engine, villager)) {
@@ -251,10 +257,14 @@ public final class VillagerReactions {
 
 	/** Starts the conversation beginning with this dialog (or just that one line, if it starts none). */
 	static void startConversation(DialogEngine engine, Villager villager, Villager partner, String first) {
+		startConversation(engine, villager, partner, first, Set.of());
+	}
+
+	static void startConversation(DialogEngine engine, Villager villager, Villager partner, String first, Set<Integer> sameSpeaker) {
 		List<String> parts = engine.library().conversations().stream().filter(c -> c.getFirst().equals(first)).findFirst()
 				.orElse(List.of(first));
 		if (engine.speakNow(villager, first, Options.DEFAULT.facing(partner))) {
-			Conversation conversation = new Conversation(villager, partner, parts);
+			Conversation conversation = new Conversation(villager, partner, parts, sameSpeaker);
 			conversations.put(villager, conversation);
 			conversations.put(partner, conversation);
 			lastConversation.put(villager, engine.now());
@@ -276,12 +286,15 @@ public final class VillagerReactions {
 			return;
 		}
 		int part = conversation.parts().indexOf(speech.dialog().id());
-		Villager listener = conversation.other(speaker);
+		Villager other = conversation.other(speaker);
+		boolean again = conversation.sameSpeaker().contains(part + 1);
+		Villager listener = again ? speaker : other;
+		Villager facing = again ? other : speaker;
 		DialogEngine engine = DialogEngine.get();
 		boolean answered = completed && engine != null && part >= 0 && part + 1 < conversation.parts().size()
-				&& listener.isAlive() && listener.distanceTo(speaker) <= CONVERSATION_DISTANCE
+				&& other.isAlive() && other.distanceTo(speaker) <= CONVERSATION_DISTANCE
 				&& engine.speakNow(listener, conversation.parts().get(part + 1),
-				Options.DEFAULT.facing(speaker).ignoringCooldowns(true, true, false));
+				Options.DEFAULT.facing(facing).ignoringCooldowns(true, true, false).asUrgent());
 		if (!answered) {
 			conversation.end();
 		}

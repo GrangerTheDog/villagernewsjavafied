@@ -121,6 +121,7 @@ public final class VillagerRoutineReactions {
 				sleepingSince.put(speaker, now);
 				nextSnore.put(speaker, now + SNORE_AFTER_TICKS + snoreGap());
 				if (Speakers.kindOf(speaker) == Speakers.Kind.VILLAGER) {
+					WorldReactions.wentToBed((Villager) speaker);
 					Reactions.say(speaker, GOES_TO_BED, Options.DEFAULT.alsoWhen(State.SLEEPING));
 				}
 			} else if (now >= nextSnore.getOrDefault(speaker, Long.MAX_VALUE)) {

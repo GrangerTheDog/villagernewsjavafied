@@ -57,7 +57,7 @@ class DialogLibraryTest {
 		List<String> ids = new ArrayList<>();
 		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class,
 				PlayerActionReactions.class, VillagerLifeReactions.class, BlockUseReactions.class,
-				VillagerRoutineReactions.class)) {
+				VillagerRoutineReactions.class, WorldReactions.class, NoticeReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
 				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
 						|| field.getName().equals("NOSED_CONVERSATIONS") || field.getName().equals("TRADE_DIALOGS")) {
@@ -68,16 +68,17 @@ class DialogLibraryTest {
 				if (value instanceof String id && !id.contains(":") && !id.equals("none")) {
 					ids.add(id);
 				} else if (value instanceof java.util.Map<?, ?> map) {
-					map.values().stream().filter(String.class::isInstance).map(String.class::cast).forEach(ids::add);
+					for (Object v : map.values()) {
+						if (v instanceof String id) {
+							ids.add(id);
+						} else if (v instanceof Record record) {
+							addRecordStrings(record, ids);
+						}
+					}
 				} else if (value instanceof List<?> list) {
 					for (Object element : list) {
 						if (element instanceof Record record) {
-							for (var component : record.getClass().getRecordComponents()) {
-								if (component.getName().equals("dialog")) {
-									component.getAccessor().setAccessible(true);
-									ids.add((String) component.getAccessor().invoke(record));
-								}
-							}
+							addRecordStrings(record, ids);
 						}
 					}
 				}
@@ -92,6 +93,19 @@ class DialogLibraryTest {
 		}
 		assertTrue(VillagerReactions.calendarDialogs(LocalDate.of(2026, 12, 31)).containsAll(List.of("xljknt", "tkkegl")));
 		assertTrue(library.conversations().stream().anyMatch(c -> c.getFirst().startsWith("gmrypk")));
+	}
+
+	/** Dialog ids held in records (a category's dialog, a remark's adult/second lines). */
+	private static void addRecordStrings(Record record, List<String> ids) throws ReflectiveOperationException {
+		for (var component : record.getClass().getRecordComponents()) {
+			if (component.getType() == String.class) {
+				component.getAccessor().setAccessible(true);
+				String value = (String) component.getAccessor().invoke(record);
+				if (value != null) {
+					ids.add(value);
+				}
+			}
+		}
 	}
 
 	@Test
