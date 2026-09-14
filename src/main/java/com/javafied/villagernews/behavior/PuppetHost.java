@@ -1,0 +1,39 @@
+package com.javafied.villagernews.behavior;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+
+/**
+ * The state the add-on's script copies from each real villager onto its
+ * puppet every tick ({@code ntshmr}), which both the puppet's visuals and its
+ * behavior read as properties. Here the villager is its own puppet, so the
+ * values are simply computed from it.
+ */
+public final class PuppetHost {
+	/** {@code p:fsjsbp}: sleeping, on ground, in water and vehicle packed as decimal digits. */
+	public static final String PACKED_STATE = "p:fsjsbp";
+	/** {@code p:enczhb}: the vehicle, see {@link #vehicleIndex}. */
+	public static final String VEHICLE = "p:enczhb";
+
+	private PuppetHost() {
+	}
+
+	public static int packedState(Entity host) {
+		boolean sleeping = host instanceof LivingEntity living && living.isSleeping();
+		return 1000 * (sleeping ? 1 : 0) + 100 * (host.onGround() ? 1 : 0) + 10 * (host.isInWater() ? 1 : 0) + vehicleIndex(host);
+	}
+
+	/** {@code whwndv}: 1 in a boat, 2 in a minecart, else 0. Java has a boat/raft per wood type. */
+	public static int vehicleIndex(Entity host) {
+		Entity vehicle = host.getVehicle();
+		if (vehicle == null) {
+			return 0;
+		}
+		String type = BuiltInRegistries.ENTITY_TYPE.getKey(vehicle.getType()).getPath();
+		if (type.endsWith("_boat") || type.endsWith("_raft")) {
+			return 1;
+		}
+		return type.equals("minecart") ? 2 : 0;
+	}
+}

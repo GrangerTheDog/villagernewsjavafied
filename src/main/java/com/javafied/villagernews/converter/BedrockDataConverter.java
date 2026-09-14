@@ -33,6 +33,8 @@ public final class BedrockDataConverter {
 		if (behaviorPack != null) {
 			writePropertyDefaults(behaviorPack.resolve("entities"), outDir.resolve("properties.json"));
 			count++;
+			// Behavior definitions (sensors, events, properties) for the server-side interpreter.
+			count += copyDir(behaviorPack.resolve("entities"), outputAssetsDir.getParent().getParent().resolve("server").resolve("entities"), ".json");
 		}
 		return count;
 	}

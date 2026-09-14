@@ -1,6 +1,7 @@
 package com.javafied.villagernews.client.bedrock;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import com.javafied.villagernews.behavior.PuppetHost;
+
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -30,12 +31,10 @@ final class VillagerPuppetPort {
 	private VillagerPuppetPort() {
 	}
 
-	/** {@code ntshmr}: p:fsjsbp packs sleeping/on-ground/in-water/vehicle as decimal digits; p:enczhb is the vehicle. */
+	/** {@code ntshmr}: the host state the script copies onto the puppet's properties. */
 	static Map<String, Value> hostDrivenProperties(Entity host) {
-		int vehicle = vehicleIndex(host);
-		boolean sleeping = host instanceof LivingEntity living && living.isSleeping();
-		int packed = 1000 * (sleeping ? 1 : 0) + 100 * (host.onGround() ? 1 : 0) + 10 * (host.isInWater() ? 1 : 0) + vehicle;
-		return Map.of("p:fsjsbp", Value.of(packed), "p:enczhb", Value.of(vehicle));
+		return Map.of(PuppetHost.PACKED_STATE, Value.of(PuppetHost.packedState(host)),
+				PuppetHost.VEHICLE, Value.of(PuppetHost.vehicleIndex(host)));
 	}
 
 	/**
@@ -49,18 +48,5 @@ final class VillagerPuppetPort {
 			return 0;
 		}
 		return host instanceof LivingEntity living && living.isBaby() ? BABY_LIFT : ADULT_LIFT;
-	}
-
-	/** {@code whwndv}: 1 in a boat, 2 in a minecart, else 0. Java has a boat/raft per wood type. */
-	private static int vehicleIndex(Entity host) {
-		Entity vehicle = host.getVehicle();
-		if (vehicle == null) {
-			return 0;
-		}
-		String type = BuiltInRegistries.ENTITY_TYPE.getKey(vehicle.getType()).getPath();
-		if (type.endsWith("_boat") || type.endsWith("_raft")) {
-			return 1;
-		}
-		return type.equals("minecart") ? 2 : 0;
 	}
 }
