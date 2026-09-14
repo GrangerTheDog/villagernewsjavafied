@@ -11,8 +11,11 @@ import com.javafied.villagernews.client.bedrock.BedrockDefinitions.BonePattern;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.ClientEntity;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.ControllerRef;
 import com.javafied.villagernews.client.bedrock.BedrockDefinitions.RenderController;
+import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.converter.ConverterUtil;
 import com.javafied.villagernews.molang.MolangProgram;
+
+import com.google.gson.JsonElement;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -139,8 +142,12 @@ public final class BedrockRuntime {
 		}
 		EntityState state = STATES.computeIfAbsent(entity, e -> new EntityState());
 		boolean puppet = ce.identifier().endsWith(":" + VillagerPuppetPort.PUPPET);
-		EntityQueries queries = new EntityQueries(entity, partialTick, defs.properties(ce.identifier()),
-				puppet ? VillagerPuppetPort.hostDrivenProperties(entity) : Map.of());
+		Map<String, JsonElement> defaults = defs.properties(ce.identifier());
+		Map<String, Value> overrides = new HashMap<>(puppet ? VillagerPuppetPort.hostDrivenProperties(entity) : Map.of());
+		// Properties the server's port of the add-on changed (what it wears, its nose, ...).
+		entity.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.<String, String>of())
+				.forEach((name, value) -> overrides.putIfAbsent(name, typed(defaults.get(name), value)));
+		EntityQueries queries = new EntityQueries(entity, partialTick, defaults, overrides);
 		RenderPlan plan = plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
 				puppet ? VillagerPuppetPort.lift(entity) : 0);
 		for (String sound : state.pendingSounds) {
@@ -148,6 +155,21 @@ public final class BedrockRuntime {
 		}
 		state.pendingSounds.clear();
 		return plan;
+	}
+
+	/** A synced property's text, typed like the property's default. */
+	private static Value typed(JsonElement defaultValue, String value) {
+		if (defaultValue != null && defaultValue.isJsonPrimitive() && defaultValue.getAsJsonPrimitive().isBoolean()) {
+			return Value.of(Boolean.parseBoolean(value));
+		}
+		if (defaultValue != null && defaultValue.isJsonPrimitive() && defaultValue.getAsJsonPrimitive().isNumber()) {
+			try {
+				return Value.of(Double.parseDouble(value));
+			} catch (NumberFormatException e) {
+				return Value.of(0);
+			}
+		}
+		return StringValue.of(value);
 	}
 
 	/**

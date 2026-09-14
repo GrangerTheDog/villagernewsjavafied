@@ -4,12 +4,14 @@ import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.Layer;
 import com.javafied.villagernews.client.bedrock.BedrockRuntime.RenderPlan;
 
+import com.geckolib.cache.model.BakedGeoModel;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.renderer.base.GeoRenderer;
 import com.geckolib.renderer.base.RenderPassInfo;
 import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
 import java.util.HashSet;
@@ -18,7 +20,8 @@ import java.util.Set;
 /**
  * Draws every layer of a {@link RenderPlan} after the first (e.g. a
  * villager's biome clothing, profession outfit and level badge on top of its
- * skin) over the same posed model, in order.
+ * skin) over the same posed model, in order. A layer with its own geometry
+ * (what a villager wears) gets its own model, posed the same way.
  */
 final class BedrockLayersRenderLayer<O, R extends GeoRenderState> extends GeoRenderLayer<BedrockAnimatable, O, R> {
 	private static final Set<Identifier> WARNED = new HashSet<>();
@@ -39,15 +42,22 @@ final class BedrockLayersRenderLayer<O, R extends GeoRenderState> extends GeoRen
 		Identifier baseModel = plan.layers().getFirst().model();
 		for (int i = 1; i < plan.layers().size(); i++) {
 			Layer layer = plan.layers().get(i);
-			// A layer can only reuse this pass's posed bones if it's the same geometry.
-			if (!layer.model().equals(baseModel)) {
+			RenderType renderType = BedrockEntityRenderer.renderType(layer.texture(), layer.kind());
+			if (layer.model().equals(baseModel)) {
+				renderer.submitRenderTasks(pass, collector.order(i), renderType);
+				continue;
+			}
+			BakedGeoModel model = renderer.getGeoModel().getBakedModel(layer.model());
+			if (model.isMissingno()) {
 				if (WARNED.add(layer.model())) {
-					VillagerNewsJavafied.LOGGER.warn("Skipping layer with different geometry {} over {} (not supported yet)",
-							layer.model(), baseModel);
+					VillagerNewsJavafied.LOGGER.warn("Missing layer geometry {}", layer.model());
 				}
 				continue;
 			}
-			renderer.submitRenderTasks(pass, collector.order(i), BedrockEntityRenderer.renderType(layer.texture(), layer.kind()));
+			ExtraModelPass<R> extra = new ExtraModelPass<>(pass, model);
+			extra.addBoneUpdater(renderer::adjustModelBonesForRender);
+			extra.captureModelRenderPose();
+			renderer.submitRenderTasks(extra, collector.order(i), renderType);
 		}
 	}
 }

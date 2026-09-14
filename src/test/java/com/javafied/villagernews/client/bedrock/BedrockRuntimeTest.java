@@ -7,6 +7,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import net.minecraft.resources.Identifier;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +46,12 @@ class BedrockRuntimeTest {
 
 	/** An adult, plains-biome farmer with skin 2 - what a freshly spawned vanilla villager could look like. */
 	private static MutableObjectBinding queries(String identifier, int profession) {
-		Map<String, JsonElement> properties = defs.properties(identifier);
+		return queries(identifier, profession, Map.of());
+	}
+
+	private static MutableObjectBinding queries(String identifier, int profession, Map<String, JsonElement> overrides) {
+		Map<String, JsonElement> properties = new java.util.HashMap<>(defs.properties(identifier));
+		properties.putAll(overrides);
 		MutableObjectBinding q = new MutableObjectBinding();
 		q.set("is_alive", Value.of(1));
 		q.set("skin_id", Value.of(2));
@@ -190,6 +197,20 @@ class BedrockRuntimeTest {
 		assertTrue(mouthMoved, "lip-sync timeline should open the mouth");
 		assertEquals(0, state.variables().get("invysa").getAsNumber(), "mouth closed after the line");
 		assertEquals("default", state.variables().get("skwjdr").getAsString(), "the line's gesture cue was picked up");
+	}
+
+	@Test
+	void villagerWearsTheHatItWasGiven() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		Identifier base = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0, queries(ce.identifier(), 1), 0)
+				.layers().getFirst().model();
+		RenderPlan plan = BedrockRuntime.plan(defs, ce, new BedrockRuntime.EntityState(), 0,
+				queries(ce.identifier(), 1, Map.of("p:mlxeez", new com.google.gson.JsonPrimitive("cryhjc"))), 0);
+		plan.layers().forEach(layer -> System.out.println("  with hat: " + layer));
+		assertTrue(plan.layers().stream().anyMatch(layer -> !layer.model().equals(base)), "an accessory layer with its own geometry");
+		assertTrue(plan.isBoneVisible("lghhat"), "the Mayor Hat's bone");
+		assertFalse(plan.isBoneVisible("egmkl2496"), "not the moustache");
+		assertTexturesExist(plan);
 	}
 
 	private static void assertTexturesExist(RenderPlan plan) {

@@ -10,6 +10,9 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 
 import net.minecraft.network.codec.ByteBufCodecs;
 
+import io.netty.buffer.ByteBuf;
+
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -26,12 +29,20 @@ public final class ModAttachments {
 
 	/**
 	 * The add-on's behavior properties ({@code p:...}) that differ from their
-	 * defaults, e.g. whether a villager has seen the difficulty change. Server
-	 * side only for now.
+	 * defaults - what a villager wears, whether it still has its nose, whether
+	 * it has seen the difficulty change. Synced: the add-on's client logic
+	 * reads several of them through {@code q.property}.
 	 */
 	public static final AttachmentType<Map<String, String>> BEHAVIOR_PROPERTIES = AttachmentRegistry.create(
 			VillagerNewsJavafied.id("behavior_properties"),
-			builder -> builder.persistent(Codec.unboundedMap(Codec.STRING, Codec.STRING)));
+			builder -> builder.persistent(Codec.unboundedMap(Codec.STRING, Codec.STRING))
+					.syncWith(ByteBufCodecs.<ByteBuf, String, String, Map<String, String>>map(HashMap::new,
+							ByteBufCodecs.STRING_UTF8, ByteBufCodecs.STRING_UTF8), AttachmentSyncPredicate.all()));
+
+	/** Whether this player was already handed the add-on's handbook. */
+	public static final AttachmentType<Boolean> RECEIVED_HANDBOOK = AttachmentRegistry.create(
+			VillagerNewsJavafied.id("received_handbook"),
+			builder -> builder.persistent(Codec.BOOL).copyOnDeath());
 
 	private ModAttachments() {
 	}

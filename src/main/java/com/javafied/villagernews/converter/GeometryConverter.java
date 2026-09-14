@@ -61,4 +61,27 @@ public final class GeometryConverter {
 		}
 		return identifierToPath;
 	}
+
+	/** The geometry with this identifier anywhere in the pack's {@code models/}, as a fresh copy; null if absent. */
+	public static JsonObject find(Path resourcePack, String identifier) throws IOException {
+		Path modelsDir = resourcePack.resolve("models");
+		if (identifier == null || !Files.isDirectory(modelsDir)) {
+			return null;
+		}
+		try (var stream = Files.walk(modelsDir)) {
+			for (Path file : stream.filter(p -> p.toString().endsWith(".json")).toList()) {
+				JsonArray geometries = ConverterUtil.readJson(file).getAsJsonArray("minecraft:geometry");
+				if (geometries == null) {
+					continue;
+				}
+				for (var element : geometries) {
+					JsonObject description = element.getAsJsonObject().getAsJsonObject("description");
+					if (description != null && identifier.equals(description.has("identifier") ? description.get("identifier").getAsString() : null)) {
+						return element.getAsJsonObject().deepCopy();
+					}
+				}
+			}
+		}
+		return null;
+	}
 }
