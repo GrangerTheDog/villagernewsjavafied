@@ -4,13 +4,23 @@ import com.javafied.villagernews.content.ModAttachments;
 
 import com.google.gson.JsonElement;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerData;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import team.unnamed.mocha.runtime.value.Function;
@@ -128,6 +138,60 @@ final class EntityQueries implements ObjectValue {
 			});
 			// We only ever render the "fancy" path.
 			case "graphics_mode_is_any" -> function(args -> Value.of(true));
+			case "is_sneaking" -> Value.of(entity.isShiftKeyDown());
+			case "is_gliding" -> Value.of(living != null && living.isFallFlying());
+			// Bedrock counts a mob afloat in water as swimming (the add-on's bobbing at the surface).
+			case "is_swimming" -> Value.of(entity.isSwimming() || entity instanceof Mob && entity.isInWater());
+			// Degrees per second the body is turning (the add-on shuffles its feet turning on the spot).
+			case "yaw_speed" -> Value.of(living != null ? Mth.wrapDegrees(living.yBodyRot - living.yBodyRotO) * 20 : 0);
+			case "ride_body_y_rotation" -> {
+				Entity vehicle = entity.getVehicle();
+				yield Value.of(vehicle instanceof LivingEntity ridden ? lerpDegrees(ridden.yBodyRotO, ridden.yBodyRot)
+						: vehicle != null ? vehicle.getYRot(partialTick) : 0);
+			}
+			case "position_delta" -> function(args -> {
+				int axis = (int) args.next().eval().getAsNumber();
+				return Value.of(axis == 0 ? entity.getX() - entity.xOld : axis == 1 ? entity.getY() - entity.yOld : entity.getZ() - entity.zOld);
+			});
+			case "main_hand_item_max_duration" -> Value.of(living != null && !living.getMainHandItem().isEmpty()
+					? living.getMainHandItem().getUseDuration(living) / 20.0 : 0);
+			case "is_owner_identifier_any" -> function(args -> {
+				String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+				for (int i = 0; i < args.length(); i++) {
+					if (args.next().eval().getAsString().equals(type)) {
+						return Value.of(true);
+					}
+				}
+				return Value.of(false);
+			});
+			case "relative_block_has_any_tag" -> function(args -> {
+				Vec3 pos = entity.getPosition(partialTick);
+				BlockPos block = BlockPos.containing(pos.x + args.next().eval().getAsNumber(), pos.y + args.next().eval().getAsNumber(),
+						pos.z + args.next().eval().getAsNumber());
+				for (int i = 3; i < args.length(); i++) {
+					if (blockHasTag(block, args.next().eval().getAsString())) {
+						return Value.of(true);
+					}
+				}
+				return Value.of(false);
+			});
+			case "equipped_item_any_tag" -> function(args -> {
+				ItemStack stack = living == null ? ItemStack.EMPTY : equipped(living, args.next().eval().getAsString());
+				for (int i = 1; i < args.length(); i++) {
+					if (itemHasTag(stack, args.next().eval().getAsString())) {
+						return Value.of(true);
+					}
+				}
+				return Value.of(false);
+			});
+			case "distance_from_camera" -> Value.of(camera().distanceTo(entity.getPosition(partialTick)));
+			// The pitch (0) or yaw (1) that would face the camera from here, in the entity's own convention.
+			case "rotation_to_camera" -> function(args -> {
+				Vec3 to = camera().subtract(entity.getPosition(partialTick));
+				double yaw = Math.toDegrees(Math.atan2(to.z, to.x)) - 90;
+				double pitch = -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
+				return Value.of(args.next().eval().getAsNumber() == 0 ? pitch : yaw);
+			});
 			default -> Value.nil();
 		};
 	}
@@ -148,6 +212,45 @@ final class EntityQueries implements ObjectValue {
 			return Value.of(value.getAsDouble());
 		}
 		return StringValue.of(value.getAsString());
+	}
+
+	private static Vec3 camera() {
+		return Minecraft.getInstance().gameRenderer.mainCamera().position();
+	}
+
+	/** Bedrock block tags, for the ones the add-on asks about (water, lava); others read as absent. */
+	private boolean blockHasTag(BlockPos pos, String tag) {
+		var fluid = entity.level().getFluidState(pos);
+		return switch (tag.replace("minecraft:", "")) {
+			case "water" -> fluid.is(FluidTags.WATER);
+			case "lava" -> fluid.is(FluidTags.LAVA);
+			default -> false;
+		};
+	}
+
+	private static ItemStack equipped(LivingEntity living, String slot) {
+		return switch (slot) {
+			case "slot.weapon.mainhand" -> living.getMainHandItem();
+			case "slot.weapon.offhand" -> living.getOffhandItem();
+			case "slot.armor.head" -> living.getItemBySlot(EquipmentSlot.HEAD);
+			case "slot.armor.chest" -> living.getItemBySlot(EquipmentSlot.CHEST);
+			case "slot.armor.legs" -> living.getItemBySlot(EquipmentSlot.LEGS);
+			case "slot.armor.feet" -> living.getItemBySlot(EquipmentSlot.FEET);
+			default -> ItemStack.EMPTY;
+		};
+	}
+
+	/** Bedrock's tool tier tags ({@code minecraft:diamond_tier}) by the item's material name, else the Java item tag of that id. */
+	private static boolean itemHasTag(ItemStack stack, String tag) {
+		if (stack.isEmpty()) {
+			return false;
+		}
+		String name = tag.replace("minecraft:", "");
+		if (name.endsWith("_tier")) {
+			return BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().startsWith(name.substring(0, name.length() - "tier".length()));
+		}
+		Identifier id = Identifier.tryParse(tag);
+		return id != null && stack.is(TagKey.create(Registries.ITEM, id));
 	}
 
 	private VillagerData villager() {
