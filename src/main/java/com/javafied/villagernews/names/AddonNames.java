@@ -55,10 +55,29 @@ public final class AddonNames {
 	private final boolean known;
 	private final Map<Kind, Map<String, String>> ids = new EnumMap<>(Kind.class);
 	private final Map<Kind, Map<String, String>> names = new EnumMap<>(Kind.class);
+	private final List<DialogFill> dialogFills = new ArrayList<>();
+
+	/**
+	 * A dialog the add-on asks for but never defines (its sensors request it),
+	 * put together from lines it does have: {@code lines} are those lines'
+	 * sound ids, {@code like} the dialog whose cooldowns it takes.
+	 */
+	public record DialogFill(String name, String id, String like, List<String> lines) {
+	}
 
 	private AddonNames(String version, boolean known, JsonObject json) {
 		this.version = version;
 		this.known = known;
+		JsonObject fills = json.getAsJsonObject("dialog_fills");
+		if (fills != null) {
+			for (Map.Entry<String, JsonElement> entry : fills.entrySet()) {
+				JsonObject fill = entry.getValue().getAsJsonObject();
+				List<String> lines = new ArrayList<>();
+				fill.getAsJsonArray("lines").forEach(line -> lines.add(line.getAsString()));
+				dialogFills.add(new DialogFill(entry.getKey(), fill.get("id").getAsString(),
+						fill.has("like") ? fill.get("like").getAsString() : null, List.copyOf(lines)));
+			}
+		}
 		for (Kind kind : Kind.values()) {
 			Map<String, String> byName = new HashMap<>();
 			Map<String, String> byId = new HashMap<>();
@@ -110,6 +129,11 @@ public final class AddonNames {
 	/** Whether the mod has names for exactly the converted add-on's version. */
 	public boolean known() {
 		return known;
+	}
+
+	/** The dialogs to put together for gaps in the add-on (see {@link DialogFill}). */
+	public List<DialogFill> dialogFills() {
+		return List.copyOf(dialogFills);
 	}
 
 	/** The add-on's id for a readable name; null if these names don't have it. */

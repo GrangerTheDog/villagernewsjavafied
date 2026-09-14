@@ -1,5 +1,7 @@
 package com.javafied.villagernews.dialog;
 
+import com.javafied.villagernews.names.AddonNames;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -31,13 +33,23 @@ class DialogLibraryTest {
 
 	@Test
 	void extractsEveryDialog() {
-		assertEquals(523, library.size());
+		// The add-on's 523, and the 12 it asks for but never defines, put together from its own lines.
+		assertEquals(523 + 12, library.size());
 		assertFalse(library.hurtSounds(false).isEmpty());
 		assertFalse(library.hurtSounds(true).isEmpty());
 		for (List<String> conversation : library.conversations()) {
 			for (String part : conversation) {
 				assertNotNull(library.get(part), "conversation part " + part);
 			}
+		}
+	}
+
+	/** The sensors ask by the add-on's id, so each fill must be found under it. */
+	@Test
+	void fillsTheDialogsTheAddOnAsksForButLacks() {
+		for (AddonNames.DialogFill fill : AddonNames.forVersion("1.0.4").dialogFills()) {
+			assertNotNull(library.byAddonId(fill.id()), fill.name());
+			assertFalse(library.get(fill.name()).lines().isEmpty(), fill.name());
 		}
 	}
 

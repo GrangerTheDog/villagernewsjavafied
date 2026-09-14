@@ -10,8 +10,13 @@ import com.google.gson.JsonPrimitive;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -142,6 +147,7 @@ public final class ScriptDataConverter {
 			}
 			dialogs.add(dialogNames.get(dialog.getKey()), named);
 		}
+		fillGaps(dialogs);
 		JsonArray conversations = new JsonArray();
 		for (List<String> chain : chains) {
 			JsonArray named = new JsonArray();
@@ -155,10 +161,56 @@ public final class ScriptDataConverter {
 		return root;
 	}
 
+	/**
+	 * The dialogs the add-on's sensors ask for but it never defines (what a
+	 * player holds - an emerald, seeds, a potion - and the wandering trader
+	 * selling out), put together from its own lines that fit: see the names
+	 * file's {@code dialog_fills}. A fill whose lines aren't all there (the
+	 * add-on changed) is left out, and so is one the add-on now defines.
+	 */
+	private void fillGaps(JsonObject dialogs) {
+		Map<String, JsonObject> linesBySound = new HashMap<>();
+		Set<String> ids = new HashSet<>();
+		for (Map.Entry<String, JsonElement> dialog : dialogs.entrySet()) {
+			ids.add(dialog.getValue().getAsJsonObject().get("id").getAsString());
+			for (JsonElement line : dialog.getValue().getAsJsonObject().getAsJsonArray("lines")) {
+				linesBySound.putIfAbsent(line.getAsJsonObject().get("sound").getAsString(), line.getAsJsonObject());
+			}
+		}
+		List<String> skipped = new ArrayList<>();
+		for (AddonNames.DialogFill fill : names.dialogFills()) {
+			if (ids.contains(fill.id()) || dialogs.has(fill.name())) {
+				continue;
+			}
+			JsonArray lines = new JsonArray();
+			fill.lines().stream().map(linesBySound::get).filter(Objects::nonNull).forEach(line -> lines.add(line.deepCopy()));
+			if (lines.size() != fill.lines().size()) {
+				skipped.add(fill.name());
+				continue;
+			}
+			JsonObject filled = new JsonObject();
+			filled.addProperty("id", fill.id());
+			filled.addProperty("filled", true);
+			JsonObject like = fill.like() == null ? null : dialogs.getAsJsonObject(fill.like());
+			if (like != null) {
+				for (String key : new String[] {"tags", "global_cooldown", "entity_cooldown"}) {
+					if (like.has(key)) {
+						filled.add(key, like.get(key).deepCopy());
+					}
+				}
+			}
+			filled.add("lines", lines);
+			dialogs.add(fill.name(), filled);
+		}
+		if (!skipped.isEmpty()) {
+			System.out.println("Dialog fills left out (their lines aren't all in this add-on): " + skipped);
+		}
+	}
+
 	void extract(String script, JsonObject dialogsOut, JsonObject hurtSoundsOut, JsonArray conversationsOut) {
 		JsLiteral js = new JsLiteral(script);
 		// A dialog referenced from inside a literal (e.g. a table of dialogs) resolves to its id.
-		Map<String, String> dialogVariables = new java.util.HashMap<>();
+		Map<String, String> dialogVariables = new HashMap<>();
 		Matcher names = DIALOG.matcher(script);
 		while (names.find()) {
 			Matcher id = Pattern.compile("\\{id:\"([^\"]+)\"").matcher(script).region(names.end(), script.length());

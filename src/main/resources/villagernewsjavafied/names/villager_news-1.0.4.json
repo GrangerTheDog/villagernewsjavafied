@@ -1,5 +1,5 @@
 {
-  "_comment": "Readable names for Villager News 1.0.4's identifiers: our own names on the left, the add-on's ids on the right. Identifiers only - no add-on content. Most dialogs aren't listed: they are named from the add-on's own guide titles when it is converted ('Start Work' -> start_work), and conversation parts after the line that opens them (<name>_part_2, ...). Listed here are the dialogs whose guide title is missing or shared.",
+  "_comment": "Readable names for Villager News 1.0.4's identifiers: our own names on the left, the add-on's ids on the right. Identifiers only - no add-on content. Most dialogs aren't listed: they are named from the add-on's own guide titles when it is converted ('Start Work' -> start_work), and conversation parts after the line that opens them (<name>_part_2, ...). Listed here are the dialogs whose guide title is missing or shared. dialog_fills: dialogs the add-on's sensors ask for but it never defines, put together from its own lines (by sound id) that fit; 'like' is the dialog whose cooldowns they take.",
   "version": "1.0.4",
   "characters": {
     "villager": "villager",
@@ -42,7 +42,13 @@
   },
   "dialog_tags": {
     "no_hurt_voice": "ouqfaa",
-    "keeps_talking": "auevko"
+    "keeps_talking": "auevko",
+    "calendar": "tkbalr",
+    "far_from_home": "apzgds",
+    "breaking_blocks": "mdqkpi",
+    "placing_blocks": "zzejjm",
+    "armor": "xemwyv",
+    "status_effects": "tctvvv"
   },
   "script_events": {
     "dialog": "oreville_vn:gjlxaa",
@@ -146,5 +152,102 @@
     "wooly_greets": "uvtocs",
     "wooly_hurt": "eyiraw",
     "wooly_hurt_by_player": "ncyeaw"
+  },
+  "dialog_fills": {
+    "hold_an_emerald": {
+      "id": "wbswhi",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:ieqsdm",
+        "oreville_vn:qdhwdd",
+        "oreville_vn:amwyug"
+      ]
+    },
+    "hold_a_lava_bucket": {
+      "id": "bknkrm",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:bnadhu",
+        "oreville_vn:ngbflb"
+      ]
+    },
+    "hold_a_tool": {
+      "id": "cppjkj",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:zhnxhs"
+      ]
+    },
+    "hold_bad_food": {
+      "id": "dpcapt",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:jhzmde",
+        "oreville_vn:dxokjm",
+        "oreville_vn:erqsme"
+      ]
+    },
+    "hold_seeds": {
+      "id": "hgnayo",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:xqaxit",
+        "oreville_vn:rmzdaw",
+        "oreville_vn:enoojz"
+      ]
+    },
+    "hold_a_weapon": {
+      "id": "iyarre",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:drwxhy"
+      ]
+    },
+    "hold_food": {
+      "id": "muofvs",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:qdivoz",
+        "oreville_vn:ypyntr"
+      ]
+    },
+    "hold_a_potion": {
+      "id": "noiikz",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:dplbsv"
+      ]
+    },
+    "hold_a_boat": {
+      "id": "ohtaif",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:hedaae"
+      ]
+    },
+    "hold_a_music_disc": {
+      "id": "wgwnlu",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:ilnxhv"
+      ]
+    },
+    "hold_an_egg": {
+      "id": "zlywmt",
+      "like": "hold_a_nearly_broken_item",
+      "lines": [
+        "oreville_vn:dzzvxz",
+        "oreville_vn:dqvolh"
+      ]
+    },
+    "wandering_trader_sold_out": {
+      "id": "ecyjtz",
+      "like": "wandering_trader_trade_bye_bought",
+      "lines": [
+        "oreville_vn:quupoi",
+        "oreville_vn:ifzejw",
+        "oreville_vn:fghyqo"
+      ]
+    }
   }
 }

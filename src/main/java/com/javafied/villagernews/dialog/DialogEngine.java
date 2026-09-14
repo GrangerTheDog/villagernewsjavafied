@@ -357,7 +357,7 @@ public final class DialogEngine {
 			});
 			own.tags.forEach((tag, until) -> {
 				if (until > now) {
-					cooldowns.add("tag " + tag + " " + seconds(until - now));
+					cooldowns.add("tag " + AddonNames.nameOf(AddonNames.Kind.DIALOG_TAG, tag) + " " + seconds(until - now));
 				}
 			});
 		}
@@ -467,7 +467,7 @@ public final class DialogEngine {
 		if (!options.ignoreTagCooldown()) {
 			for (String tag : dialog.tags().keySet()) {
 				if (global.tags.getOrDefault(tag, 0L) > now || own != null && own.tags.getOrDefault(tag, 0L) > now) {
-					return "cooldown on tag " + tag;
+					return "cooldown on tag " + AddonNames.nameOf(AddonNames.Kind.DIALOG_TAG, tag);
 				}
 			}
 		}
