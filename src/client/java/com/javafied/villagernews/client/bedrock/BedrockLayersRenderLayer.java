@@ -15,6 +15,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
@@ -36,7 +37,8 @@ final class BedrockLayersRenderLayer<O, R extends GeoRenderState> extends GeoRen
 
 	@Override
 	public void submitRenderTask(RenderPassInfo<R> pass, SubmitNodeCollector collector) {
-		if (!pass.willRender()) {
+		// An invisible entity's clothes and the like vanish with it.
+		if (!pass.willRender() || pass.renderState() instanceof EntityRenderState state && state.isInvisible) {
 			return;
 		}
 		RenderPlan plan = pass.getGeckolibData(BedrockGeoModel.PLAN);

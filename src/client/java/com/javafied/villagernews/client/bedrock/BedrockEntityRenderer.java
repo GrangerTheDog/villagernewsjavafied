@@ -37,10 +37,12 @@ public class BedrockEntityRenderer<E extends Entity, R extends EntityRenderState
 		};
 	}
 
+	/** The first layer's material; invisible entities as GeckoLib has them (hidden, or see-through to spectators). */
 	@Override
 	public RenderType getRenderType(R renderState, Identifier texture) {
 		RenderPlan plan = renderState.getGeckolibData(BedrockGeoModel.PLAN);
-		return plan == null ? super.getRenderType(renderState, texture) : renderType(texture, plan.layers().getFirst().kind());
+		return plan == null || renderState.isInvisible ? super.getRenderType(renderState, texture)
+				: renderType(texture, plan.layers().getFirst().kind());
 	}
 
 	/**
