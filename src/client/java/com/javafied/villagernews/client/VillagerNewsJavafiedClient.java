@@ -29,6 +29,7 @@ public class VillagerNewsJavafiedClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		MolangProgram.setErrorReporter(VillagerNewsJavafied.LOGGER::warn);
 		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(BedrockDefinitions.ID, new BedrockDefinitions());
+		DialogClient.init();
 
 		EntityRendererRegistry.register(EntityTypes.SHEEP, context -> new BedrockEntityRenderer<>(context,
 				new BedrockGeoModel(entity -> SHEEP_CLIENT_ENTITY), new BedrockAnimatable()));

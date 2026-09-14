@@ -3,6 +3,9 @@ package com.javafied.villagernews;
 import com.javafied.villagernews.content.ModAttachments;
 import com.javafied.villagernews.content.ModItems;
 import com.javafied.villagernews.content.VillagerCommand;
+import com.javafied.villagernews.dialog.DialogEngine;
+import com.javafied.villagernews.dialog.DialogPayloads;
+import com.javafied.villagernews.dialog.VillagerReactions;
 
 import net.fabricmc.api.ModInitializer;
 
@@ -22,6 +25,9 @@ public class VillagerNewsJavafied implements ModInitializer {
 		ModAttachments.init();
 		ModItems.init();
 		VillagerCommand.init();
+		DialogPayloads.register();
+		DialogEngine.init();
+		VillagerReactions.init();
 	}
 
 	public static Identifier id(String path) {

@@ -156,6 +156,42 @@ class BedrockRuntimeTest {
 				"offset animation and puppet lift should cancel out");
 	}
 
+	@Test
+	void dyingVillagerCriesOut() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		MutableObjectBinding q = queries(ce.identifier(), 1);
+		BedrockRuntime.EntityState state = new BedrockRuntime.EntityState();
+		for (int frame = 0; frame < 5; frame++) {
+			BedrockRuntime.plan(defs, ce, state, frame * 0.05, q, 0);
+		}
+		assertTrue(state.pendingSounds().isEmpty(), "no sounds while alive");
+		q.set("is_alive", Value.of(0));
+		for (int frame = 5; frame < 10; frame++) {
+			BedrockRuntime.plan(defs, ce, state, frame * 0.05, q, 0);
+		}
+		assertEquals(1, state.pendingSounds().size(), "one death cry: " + state.pendingSounds());
+		assertTrue(state.pendingSounds().getFirst().startsWith("oreville_vn:"));
+	}
+
+	@Test
+	void speakingLineDrivesTheMouthThenEnds() {
+		BedrockDefinitions.ClientEntity ce = defs.clientEntity("villager");
+		MutableObjectBinding q = queries(ce.identifier(), 1);
+		BedrockRuntime.EntityState state = new BedrockRuntime.EntityState();
+		BedrockRuntime.plan(defs, ce, state, 0, q, 0);
+		state.playAnimation("animation.oreville_vn.awlism"); // 1.81 s, "Aaghh!"
+		boolean mouthMoved = false;
+		for (int frame = 1; frame <= 60; frame++) {
+			BedrockRuntime.plan(defs, ce, state, frame * 0.05, q, 0);
+			if (frame * 0.05 < 1.8) {
+				mouthMoved |= state.variables().get("invysa").getAsNumber() > 0;
+			}
+		}
+		assertTrue(mouthMoved, "lip-sync timeline should open the mouth");
+		assertEquals(0, state.variables().get("invysa").getAsNumber(), "mouth closed after the line");
+		assertEquals("default", state.variables().get("skwjdr").getAsString(), "the line's gesture cue was picked up");
+	}
+
 	private static void assertTexturesExist(RenderPlan plan) {
 		for (Layer layer : plan.layers()) {
 			assertTrue(Files.exists(ASSETS.resolve(layer.texture().getPath())), "missing texture " + layer.texture());

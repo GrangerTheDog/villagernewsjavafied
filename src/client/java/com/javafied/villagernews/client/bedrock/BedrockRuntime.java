@@ -78,13 +78,29 @@ public final class BedrockRuntime {
 		final MutableObjectBinding variables = new MutableObjectBinding();
 		final Map<String, ControllerState> controllers = new HashMap<>();
 		final Map<String, AnimationState> animations = new HashMap<>();
+		/** Played once over the {@code animate} list, like Bedrock's {@code entity.playAnimation(name)} (e.g. lip sync). */
+		final Set<String> scriptAnimations = new java.util.LinkedHashSet<>();
+		/** Bedrock sound events controller states asked for since the last frame; the caller plays them. */
+		final List<String> pendingSounds = new ArrayList<>();
 		String clientEntity;
 		double lastTime = Double.NaN;
 
 		public MutableObjectBinding variables() {
 			return variables;
 		}
+
+		public List<String> pendingSounds() {
+			return pendingSounds;
+		}
+
+		public void playAnimation(String name) {
+			String key = name.toLowerCase(Locale.ROOT);
+			animations.remove(SCRIPT_PREFIX + key); // replaying restarts it
+			scriptAnimations.add(key);
+		}
 	}
+
+	private static final String SCRIPT_PREFIX = "script/";
 
 	private static final class ControllerState {
 		String state;
@@ -109,6 +125,11 @@ public final class BedrockRuntime {
 	private BedrockRuntime() {
 	}
 
+	/** Starts a one-shot animation on the entity's model, e.g. the lip sync of a line it's speaking. */
+	public static void playAnimation(Entity entity, String animation) {
+		STATES.computeIfAbsent(entity, e -> new EntityState()).playAnimation(animation);
+	}
+
 	/** Null if the add-on hasn't been converted (or doesn't define this client entity). */
 	public static RenderPlan evaluate(Entity entity, String clientEntityId, float partialTick) {
 		BedrockDefinitions.Snapshot defs = BedrockDefinitions.get();
@@ -120,8 +141,13 @@ public final class BedrockRuntime {
 		boolean puppet = ce.identifier().endsWith(":" + VillagerPuppetPort.PUPPET);
 		EntityQueries queries = new EntityQueries(entity, partialTick, defs.properties(ce.identifier()),
 				puppet ? VillagerPuppetPort.hostDrivenProperties(entity) : Map.of());
-		return plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
+		RenderPlan plan = plan(defs, ce, state, (entity.tickCount + partialTick) / 20.0, queries,
 				puppet ? VillagerPuppetPort.lift(entity) : 0);
+		for (String sound : state.pendingSounds) {
+			BedrockSounds.playFrom(entity, sound);
+		}
+		state.pendingSounds.clear();
+		return plan;
 	}
 
 	/**
@@ -246,6 +272,15 @@ public final class BedrockRuntime {
 					play(ref.name(), "animate/" + ref.name(), weight);
 				}
 			}
+			for (String name : List.copyOf(state.scriptAnimations)) {
+				Animation animation = defs.animation(name);
+				String key = SCRIPT_PREFIX + name;
+				playAnimation(animation, key, 1);
+				AnimationState as = state.animations.get(key);
+				if (animation == null || as == null || as.finished) {
+					state.scriptAnimations.remove(name);
+				}
+			}
 			// Animations that stopped playing restart from 0 next time they're reached.
 			state.animations.keySet().retainAll(activeAnimations);
 			return poses;
@@ -319,8 +354,17 @@ public final class BedrockRuntime {
 		}
 
 		private void runScripts(State s, boolean entry) {
-			if (s != null) {
-				(entry ? s.onEntry() : s.onExit()).forEach(script -> MolangProgram.of(script).eval(scope));
+			if (s == null) {
+				return;
+			}
+			(entry ? s.onEntry() : s.onExit()).forEach(script -> MolangProgram.of(script).eval(scope));
+			if (entry) {
+				for (String effect : s.soundEffects()) {
+					String sound = ce.soundEffects().get(effect);
+					if (sound != null) {
+						state.pendingSounds.add(sound);
+					}
+				}
 			}
 		}
 

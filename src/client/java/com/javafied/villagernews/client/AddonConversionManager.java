@@ -1,5 +1,6 @@
 package com.javafied.villagernews.client;
 
+import com.javafied.villagernews.ConvertedPack;
 import com.javafied.villagernews.VillagerNewsJavafied;
 import com.javafied.villagernews.converter.ConverterCli;
 import com.javafied.villagernews.converter.ConverterUtil;
@@ -22,13 +23,13 @@ import java.util.List;
  * picks it up automatically. We just make sure it's selected and applied.
  */
 public final class AddonConversionManager {
-	private static final String PACK_ID = "villagernewsjavafied-converted";
+	private static final String PACK_ID = ConvertedPack.PACK_ID;
 
 	private AddonConversionManager() {
 	}
 
 	public static Path convertedPackDir() {
-		return FabricLoader.getInstance().getGameDir().resolve("resourcepacks").resolve(PACK_ID);
+		return ConvertedPack.dir();
 	}
 
 	private static Path lastPathFile() {

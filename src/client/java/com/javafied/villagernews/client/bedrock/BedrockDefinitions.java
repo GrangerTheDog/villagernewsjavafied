@@ -44,9 +44,11 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 		}
 	}
 
+	/** @param soundEffects short name -> Bedrock sound event, for animation controllers' {@code sound_effects} */
 	public record ClientEntity(String identifier, Map<String, String> geometry, Map<String, String> textures,
 			Map<String, String> materials, Map<String, String> animations, List<String> initialize,
-			List<String> preAnimation, String scale, List<ControllerRef> renderControllers, List<ControllerRef> animate) {
+			List<String> preAnimation, String scale, List<ControllerRef> renderControllers, List<ControllerRef> animate,
+			Map<String, String> soundEffects) {
 	}
 
 	public record RenderController(Map<String, List<String>> arrays, String geometry, List<String> textures,
@@ -178,7 +180,8 @@ public final class BedrockDefinitions implements ResourceManagerReloadListener {
 				stringList(scripts.get("pre_animation")),
 				scripts.has("scale") ? molang(scripts.get("scale")) : "1",
 				controllerRefs(d.get("render_controllers")),
-				controllerRefs(scripts.get("animate")));
+				controllerRefs(scripts.get("animate")),
+				stringMap(d.getAsJsonObject("sound_effects")));
 	}
 
 	private static RenderController parseRenderController(JsonObject rc) {

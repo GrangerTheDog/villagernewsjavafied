@@ -196,8 +196,9 @@ public final class BedrockAnimations {
 	public record Transition(String target, String condition) {
 	}
 
+	/** @param soundEffects short names from the client entity's {@code sound_effects}, played on entering the state */
 	public record State(List<AnimationRef> animations, List<Transition> transitions, List<String> onEntry,
-			List<String> onExit) {
+			List<String> onExit, List<String> soundEffects) {
 	}
 
 	public record Controller(String name, String initialState, Map<String, State> states) {
@@ -280,9 +281,17 @@ public final class BedrockAnimations {
 							e.getAsJsonObject().entrySet().forEach(t -> transitions.add(new Transition(t.getKey(), molang(t.getValue()))));
 						}
 					}
+					List<String> soundEffects = new ArrayList<>();
+					if (state.get("sound_effects") instanceof JsonArray array) {
+						for (JsonElement e : array) {
+							if (e.isJsonObject() && e.getAsJsonObject().has("effect")) {
+								soundEffects.add(e.getAsJsonObject().get("effect").getAsString().toLowerCase(Locale.ROOT));
+							}
+						}
+					}
 					states.put(s.getKey(), new State(List.copyOf(animations), List.copyOf(transitions),
 							state.has("on_entry") ? strings(state.get("on_entry")) : List.of(),
-							state.has("on_exit") ? strings(state.get("on_exit")) : List.of()));
+							state.has("on_exit") ? strings(state.get("on_exit")) : List.of(), List.copyOf(soundEffects)));
 				}
 			}
 			String initial = c.has("initial_state") ? c.get("initial_state").getAsString() : "default";
