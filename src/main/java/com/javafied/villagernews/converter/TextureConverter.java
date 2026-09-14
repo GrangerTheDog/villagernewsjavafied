@@ -78,4 +78,26 @@ public final class TextureConverter {
 		converted.getGraphics().drawImage(source, 0, 0, null);
 		return converted;
 	}
+
+	/**
+	 * Bedrock's {@code sheep} material reads a texture's alpha as a dye mask
+	 * (wool 255, skin and hooves a faint 3) rather than as opacity. Java draws
+	 * alpha as opacity, so the skin would all but vanish: make every pixel
+	 * that isn't fully transparent opaque. (Undyed, the tint is white anyway.)
+	 */
+	public static void opaqueDyeMask(Path png) throws IOException {
+		if (!Files.exists(png)) {
+			return;
+		}
+		BufferedImage image = read(png);
+		for (int y = 0; y < image.getHeight(); y++) {
+			for (int x = 0; x < image.getWidth(); x++) {
+				int argb = image.getRGB(x, y);
+				if ((argb >>> 24) != 0) {
+					image.setRGB(x, y, argb | 0xFF000000);
+				}
+			}
+		}
+		writePng(image, png);
+	}
 }

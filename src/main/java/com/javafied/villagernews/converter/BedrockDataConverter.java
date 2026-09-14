@@ -26,6 +26,7 @@ public final class BedrockDataConverter {
 		Path outDir = outputAssetsDir.resolve("bedrock");
 		int count = 0;
 		count += copyDir(resourcePack.resolve("entity"), outDir.resolve("entity"), ".json");
+		fixSheepMaterialTextures(resourcePack.resolve("entity"), outputAssetsDir);
 		count += copyDir(resourcePack.resolve("render_controllers"), outDir.resolve("render_controllers"), ".json");
 		count += copyDir(resourcePack.resolve("animation_controllers"), outDir.resolve("animation_controllers"), ".json");
 		count += copyDir(resourcePack.resolve("animations"), outDir.resolve("animations"), ".json");
@@ -40,6 +41,25 @@ public final class BedrockDataConverter {
 			count += copyDir(behaviorPack.resolve("trading"), server.resolve("trading"), ".json");
 		}
 		return count;
+	}
+
+	/** Default textures of client entities drawn with Bedrock's {@code sheep} material (Wooly): see {@link TextureConverter#opaqueDyeMask}. */
+	private static void fixSheepMaterialTextures(Path entityDir, Path outputAssetsDir) throws IOException {
+		if (!Files.isDirectory(entityDir)) {
+			return;
+		}
+		try (var stream = Files.walk(entityDir)) {
+			for (Path file : stream.filter(p -> p.toString().endsWith(".json")).toList()) {
+				JsonObject clientEntity = ConverterUtil.readJson(file).getAsJsonObject("minecraft:client_entity");
+				JsonObject description = clientEntity == null ? null : clientEntity.getAsJsonObject("description");
+				JsonObject materials = description == null ? null : description.getAsJsonObject("materials");
+				JsonObject textures = description == null ? null : description.getAsJsonObject("textures");
+				if (materials != null && textures != null && materials.has("default") && textures.has("default")
+						&& materials.get("default").getAsString().equals("sheep")) {
+					TextureConverter.opaqueDyeMask(outputAssetsDir.resolve(textures.get("default").getAsString() + ".png"));
+				}
+			}
+		}
 	}
 
 	private static int copyDir(Path from, Path to, String extension) throws IOException {

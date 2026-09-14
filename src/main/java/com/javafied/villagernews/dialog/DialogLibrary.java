@@ -99,6 +99,10 @@ public final class DialogLibrary {
 		return dialogs.get(id);
 	}
 
+	public java.util.Set<String> ids() {
+		return dialogs.keySet();
+	}
+
 	public boolean isEmpty() {
 		return dialogs.isEmpty();
 	}
