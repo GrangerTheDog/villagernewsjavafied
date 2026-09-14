@@ -84,6 +84,13 @@ public final class WorldReactions {
 	private static final String SET_OFF_FIREWORK = "dfdkli";
 	private static final String SAW_FIREWORK = "zeykfp";
 	private static final String SAW_LIGHTNING = "ikrwzy";
+	private static final String CAUGHT_IN_RAIN = "scbmka";
+	private static final String TRADER_CAUGHT_IN_RAIN = "kxoqky";
+	private static final String SHEEP = "vxycol";
+	private static final String WOOLY_JOINS_IN = "fskcce";
+	private static final String TRADER_DRINKS_POTION = "vggdrt";
+	private static final String TRADER_DRINKS_POTION_ONE_LLAMA = "jkeahu";
+	private static final String TRADER_DRINKS_POTION_TWO_LLAMAS = "myajyt";
 
 	/** Search boxes around a villager for fire, campfires and TNT, rotating through three sizes (radius, height). */
 	private static final int[][] SEARCH = {{3, 4}, {5, 3}, {7, 2}};
@@ -102,6 +109,16 @@ public final class WorldReactions {
 
 	public static void init() {
 		ServerTickEvents.END_SERVER_TICK.register(WorldReactions::tick);
+		// A villager's third line about sheep invites Wooly (if close by) to answer.
+		DialogEngine.onFinished((speech, completed) -> {
+			if (completed && speech.dialog().id().equals(SHEEP) && speech.line() == 2 && speech.speaker().level() instanceof ServerLevel level) {
+				LivingEntity speaker = speech.speaker();
+				level.getEntitiesOfClass(LivingEntity.class, speaker.getBoundingBox().inflate(4),
+								e -> Speakers.kindOf(e) == Speakers.Kind.WOOLY && e.distanceTo(speaker) <= 4).stream().findFirst()
+						.ifPresent(wooly -> Reactions.say(wooly, WOOLY_JOINS_IN, Options.DEFAULT.withKinds(Speakers.Kind.WOOLY)
+								.facing(speaker).ignoringCooldowns(true, true, true).asUrgent()));
+			}
+		});
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
 			if (entity instanceof ItemEntity item && throwing != null) {
 				thrownBy.put(item, throwing);
@@ -170,6 +187,23 @@ public final class WorldReactions {
 		}
 	}
 
+	/** Called (through a mixin) when the wandering trader gets an effect (drinking his invisibility potion). */
+	public static void traderGotEffect(LivingEntity trader) {
+		long llamas = trader.level().getEntitiesOfClass(LivingEntity.class, trader.getBoundingBox().inflate(16),
+				e -> e instanceof net.minecraft.world.entity.Leashable leashed && leashed.getLeashHolder() == trader
+						&& BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath().equals("trader_llama")).size();
+		List<String> options = new java.util.ArrayList<>(List.of(TRADER_DRINKS_POTION));
+		if (llamas == 1) {
+			options.add(TRADER_DRINKS_POTION_ONE_LLAMA);
+		} else if (llamas == 2) {
+			options.add(TRADER_DRINKS_POTION_TWO_LLAMAS);
+		}
+		DialogEngine engine = DialogEngine.get();
+		if (engine != null) {
+			engine.speakNow(trader, pick(options), Options.DEFAULT);
+		}
+	}
+
 	/** Called (through a mixin) when a button is pressed, by anyone or anything. */
 	public static void buttonPressed(ServerLevel level, BlockPos pos) {
 		Vec3 at = Vec3.atCenterOf(pos);
@@ -213,6 +247,13 @@ public final class WorldReactions {
 					for (Villager villager : level.getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(Reactions.NEARBY))) {
 						if (Speakers.kindOf(villager) == Speakers.Kind.VILLAGER && seen.add(villager)) {
 							surroundings(level, villager, size);
+						}
+					}
+					for (LivingEntity speaker : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(Reactions.NEARBY),
+							e -> Speakers.kindOf(e) == Speakers.Kind.VILLAGER || Speakers.kindOf(e) == Speakers.Kind.TRADER)) {
+						if (level.isRainingAt(speaker.blockPosition().above()) && DialogEngine.get().idle(speaker)) {
+							Reactions.say(speaker, Speakers.kindOf(speaker) == Speakers.Kind.TRADER ? TRADER_CAUGHT_IN_RAIN : CAUGHT_IN_RAIN,
+									Options.DEFAULT);
 						}
 					}
 					if (level.getBlockState(player.getOnPos()).is(BlockTags.BEDS)) {

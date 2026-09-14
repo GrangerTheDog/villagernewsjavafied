@@ -38,6 +38,8 @@ public final class VillagerLifeReactions {
 	private static final String SAW_VILLAGER_DIE = "pmqrpb";
 	private static final String IRON_GOLEM_FIGHTS_PLAYER = "qffeco";
 	private static final String BABY_ASKED_TO_TRADE = "aezdiy";
+	private static final String CURED = "ivumgm";
+	private static final String CURED_BABY = "ggitzq";
 	private static final String SPAWNED_BY_EGG = "vskjkl";
 	private static final String SPAWNED_BY_EGG_BABY = "abfwiv";
 	private static final String CELEBRATING = "wbbxpo";
@@ -110,6 +112,11 @@ public final class VillagerLifeReactions {
 				celebrations(server);
 			}
 		});
+	}
+
+	/** Called (through a mixin) the tick after a zombie villager was cured back into a villager. */
+	public static void cured(Villager villager) {
+		Reactions.sayByAge(villager, CURED, CURED_BABY, Options.DEFAULT);
 	}
 
 	/** Called (through a mixin) the tick after an ordinary villager was spawned from an egg or by command. */

@@ -118,6 +118,7 @@ public final class PlayerActionReactions {
 	private static final String TRAMPLED_CROPS = "pizztd";
 	private static final String ATE_FOOD = "akerwb";
 	private static final String SHEARED_SHEEP = "edrtbe";
+	private static final String SHEARED_WOOLY = "jqaekk";
 	private static final String USED_LEAD = "elexev";
 	private static final String STARING = "cavwps";
 	private static final double STARE_RANGE = 8;
@@ -188,9 +189,13 @@ public final class PlayerActionReactions {
 		Reactions.nearest(player.level(), player.position(), ATE_FOOD, toward(player));
 	}
 
-	/** Called (through a mixin) when an ordinary sheep is sheared. */
+	/** Called (through a mixin) when a sheep is sheared: villagers react; Wooly complains himself. */
 	public static void sheared(ServerLevel level, LivingEntity sheep) {
-		if (Speakers.kindOf(sheep) == null) {
+		if (Speakers.kindOf(sheep) == Speakers.Kind.WOOLY) {
+			Player shearer = level.getNearestPlayer(sheep, 6);
+			Options options = Options.DEFAULT.withKinds(Speakers.Kind.WOOLY).ignoringCooldowns(true, true, true).asUrgent();
+			Reactions.say(sheep, SHEARED_WOOLY, shearer == null ? options : options.facing(shearer));
+		} else if (Speakers.kindOf(sheep) == null) {
 			Reactions.nearest(level, sheep.position(), SHEARED_SHEEP, Options.DEFAULT.facing(sheep));
 		}
 	}

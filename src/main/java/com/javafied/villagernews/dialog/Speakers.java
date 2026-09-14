@@ -51,6 +51,11 @@ public final class Speakers {
 		return null;
 	}
 
+	/** The add-on lets players shear a villager's nose off (property {@code p:gcfsvg}). */
+	public static boolean hasNose(Entity entity) {
+		return !"false".equals(entity.getAttachedOrElse(ModAttachments.BEHAVIOR_PROPERTIES, Map.of()).get("p:gcfsvg"));
+	}
+
 	public static boolean isBaby(Entity entity) {
 		return entity instanceof LivingEntity living && living.isBaby();
 	}

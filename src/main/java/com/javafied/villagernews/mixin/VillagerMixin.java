@@ -38,6 +38,13 @@ abstract class VillagerMixin {
 		Villager self = (Villager) (Object) this;
 		if (reason == EntitySpawnReason.STRUCTURE) {
 			self.setAttached(ModAttachments.FROM_VILLAGE_GENERATION, true);
+		} else if (reason == EntitySpawnReason.CONVERSION && level.getLevel().getServer() != null) {
+			var server = level.getLevel().getServer();
+			server.schedule(new TickTask(server.getTickCount() + 1, () -> {
+				if (self.isAlive()) {
+					VillagerLifeReactions.cured(self);
+				}
+			}));
 		} else if ((reason == EntitySpawnReason.SPAWN_ITEM_USE || reason == EntitySpawnReason.COMMAND
 				|| reason == EntitySpawnReason.DISPENSER) && level.getLevel().getServer() != null) {
 			var server = level.getLevel().getServer();
@@ -69,6 +76,11 @@ abstract class VillagerMixin {
 				}
 			}));
 		}
+	}
+
+	@Inject(method = "increaseMerchantCareer", at = @At("TAIL"))
+	private void villagernewsjavafied$levelledUp(ServerLevel level, CallbackInfo ci) {
+		com.javafied.villagernews.dialog.TradeReactions.levelledUp((Villager) (Object) this);
 	}
 
 	@Inject(method = "pickUpItem", at = @At("HEAD"))

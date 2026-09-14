@@ -58,10 +58,10 @@ class DialogLibraryTest {
 		for (Class<?> reactions : List.of(VillagerReactions.class, VillagerItemReactions.class, TradeReactions.class,
 				PlayerActionReactions.class, VillagerLifeReactions.class, BlockUseReactions.class,
 				VillagerRoutineReactions.class, WorldReactions.class, NoticeReactions.class,
-				HurtReactions.class)) {
+				HurtReactions.class, WorkReactions.class)) {
 			for (Field field : reactions.getDeclaredFields()) {
 				if (!Modifier.isStatic(field.getModifiers()) || field.getName().startsWith("TAG_") || field.getName().startsWith("ITEM_")
-						|| field.getName().equals("NOSED_CONVERSATIONS") || field.getName().equals("TRADE_DIALOGS")) {
+						|| field.getName().startsWith("GROUP_") || field.getName().startsWith("BLOCK_") || field.getName().equals("TRADE_DIALOGS")) {
 					continue;
 				}
 				field.setAccessible(true);

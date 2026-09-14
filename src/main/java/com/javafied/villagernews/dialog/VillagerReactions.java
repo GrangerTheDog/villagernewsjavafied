@@ -12,6 +12,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
@@ -54,7 +56,7 @@ public final class VillagerReactions {
 	private static final String APRIL_FOOLS = "obitls";
 	private static final String NEW_YEARS_EVE = "xljknt";
 	/** Conversations both villagers can have with their noses on (the others are about losing one). */
-	private static final String NOSED_CONVERSATIONS = "gmrypk";
+	private static final String GROUP_NOSES = "gmrypk";
 	// Dialog tags the hurt reaction respects.
 	private static final String TAG_NO_HURT_VOICE = "ouqfaa";
 	private static final String TAG_KEEPS_TALKING = "auevko";
@@ -67,10 +69,25 @@ public final class VillagerReactions {
 	/** The add-on's idle timer re-arms every 19-37 seconds per villager. */
 	private static final int CHATTER_MIN_TICKS = 19 * 20;
 	private static final int CHATTER_MAX_TICKS = 37 * 20;
+	/** The trader's own timer: 23-41 seconds. */
+	private static final int TRADER_MIN_TICKS = 23 * 20;
+	private static final int TRADER_MAX_TICKS = 41 * 20;
+	/** The special characters' idle lines (#9 half the time talks about holding his microphone instead). */
+	private static final Map<Speakers.Kind, String> CHARACTER_IDLE = Map.of(Speakers.Kind.MAYOR, "xxehbq",
+			Speakers.Kind.TESTIFICATE_MAN, "luoibc", Speakers.Kind.NUMBER_5, "legnsy", Speakers.Kind.NUMBER_9, "ezgbfw",
+			Speakers.Kind.WOOLY, "vmohcm");
+	private static final String NUMBER_9_MICROPHONE = "adhvqz";
+	private static final String TRADER_SEES_CUSTOMER = "hxlyuc";
+	private static final String TRADER_INVISIBLE = "dbzjqi";
+	private static final String TRADER_IDLE = "stqafd";
+	private static final String NO_NOSE = "dcvgnm";
+	/** Conversation groups by noses: both villagers have theirs / neither / one of them. */
+	private static final String GROUP_NO_NOSES = "loicsw";
+	private static final String GROUP_ONE_NOSE = "bygaxw";
 	private static final double CONVERSATION_DISTANCE = 2.5;
 	private static final int CONVERSATION_REST_TICKS = 1400;
 
-	private static final Map<Villager, Long> nextChatter = new WeakHashMap<>();
+	private static final Map<LivingEntity, Long> nextChatter = new WeakHashMap<>();
 	private static final Map<Villager, Conversation> conversations = new WeakHashMap<>();
 	private static final Map<Villager, Long> lastConversation = new WeakHashMap<>();
 
@@ -109,25 +126,45 @@ public final class VillagerReactions {
 		}
 		long now = engine.now();
 		for (ServerLevel level : server.getAllLevels()) {
-			Set<Villager> nearPlayers = new HashSet<>();
+			Set<LivingEntity> nearPlayers = new HashSet<>();
 			for (ServerPlayer player : level.players()) {
-				nearPlayers.addAll(level.getEntitiesOfClass(Villager.class,
-						player.getBoundingBox().inflate(DialogEngine.RANGE)));
+				nearPlayers.addAll(level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(DialogEngine.RANGE),
+						e -> Speakers.kindOf(e) != null));
 			}
-			for (Villager villager : nearPlayers) {
-				Long due = nextChatter.get(villager);
+			for (LivingEntity speaker : nearPlayers) {
+				Long due = nextChatter.get(speaker);
 				if (due == null || now >= due) {
-					nextChatter.put(villager, now + ThreadLocalRandom.current().nextInt(CHATTER_MIN_TICKS, CHATTER_MAX_TICKS + 1));
+					boolean trader = Speakers.kindOf(speaker) == Speakers.Kind.TRADER;
+					nextChatter.put(speaker, now + ThreadLocalRandom.current().nextInt(trader ? TRADER_MIN_TICKS : CHATTER_MIN_TICKS,
+							(trader ? TRADER_MAX_TICKS : CHATTER_MAX_TICKS) + 1));
 					if (due != null) {
-						chatter(engine, villager);
+						chatter(engine, speaker);
 					}
 				}
 			}
 		}
 	}
 
-	/** The script's idle trigger ({@code vszwnq}): the odd calendar remark, else a chat with a neighbour or a comment. */
-	private static void chatter(DialogEngine engine, Villager villager) {
+	/** The script's idle trigger ({@code vszwnq}), by who's idling. */
+	private static void chatter(DialogEngine engine, LivingEntity speaker) {
+		Speakers.Kind kind = Speakers.kindOf(speaker);
+		if (kind == Speakers.Kind.VILLAGER) {
+			villagerChatter(engine, (Villager) speaker);
+		} else if (kind == Speakers.Kind.TRADER) {
+			traderChatter(engine, speaker);
+		} else if (CHARACTER_IDLE.containsKey(kind)) {
+			String line = kind == Speakers.Kind.NUMBER_9 && ThreadLocalRandom.current().nextBoolean() ? NUMBER_9_MICROPHONE
+					: CHARACTER_IDLE.get(kind);
+			Options options = Options.DEFAULT.ignoringCooldowns(false, true, false).withKinds(kind);
+			if (kind == Speakers.Kind.MAYOR) {
+				options = options.withStates(DialogEngine.State.BABY);
+			}
+			engine.request(speaker, line, options);
+		}
+	}
+
+	/** Ordinary villagers: the odd calendar remark, else a chat with a neighbour or a comment. */
+	private static void villagerChatter(DialogEngine engine, Villager villager) {
 		if (villager.isBaby()) {
 			VillagerLifeReactions.babyAtPlay(villager);
 			return;
@@ -136,6 +173,10 @@ public final class VillagerReactions {
 			return;
 		}
 		if (villager.getVehicle() instanceof AbstractBoat || VillagerRoutineReactions.eveningGathering(engine, villager)) {
+			return;
+		}
+		if (WorkReactions.atWorkHours(villager) && ThreadLocalRandom.current().nextBoolean()
+				&& WorkReactions.chatter((ServerLevel) villager.level(), villager)) {
 			return;
 		}
 		if (ThreadLocalRandom.current().nextDouble() > 0.8) {
@@ -155,6 +196,31 @@ public final class VillagerReactions {
 			return;
 		}
 		engine.request(villager, contextDialog(villager), Options.DEFAULT.ignoringCooldowns(false, true, false));
+	}
+
+	/**
+	 * The trader, every 23-41 seconds: "ah, a customer" if a player within 16
+	 * blocks is in his view (120 degrees), a remark about being invisible,
+	 * or just about the day.
+	 */
+	private static void traderChatter(DialogEngine engine, LivingEntity trader) {
+		Player customer = null;
+		for (Player player : trader.level().getEntitiesOfClass(Player.class, trader.getBoundingBox().inflate(16))) {
+			net.minecraft.world.phys.Vec3 to = player.position().subtract(trader.position()).normalize();
+			if (!player.isSpectator() && player.distanceTo(trader) <= 16 && trader.getViewVector(1).dot(to) >= Math.cos(Math.toRadians(60))) {
+				customer = player;
+				break;
+			}
+		}
+		List<String> options = new ArrayList<>();
+		if (customer != null) {
+			options.add(TRADER_SEES_CUSTOMER);
+		}
+		if (trader.hasEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY)) {
+			options.add(TRADER_INVISIBLE);
+		}
+		String line = options.isEmpty() ? TRADER_IDLE : pick(options);
+		engine.speakNow(trader, line, customer == null ? Options.DEFAULT : Options.DEFAULT.facing(customer));
 	}
 
 	/** The script's idle check for experience orbs: four or more within 12 blocks. */
@@ -214,6 +280,9 @@ public final class VillagerReactions {
 		} else if (HOT_BIOMES.contains(biome)) {
 			options.add(HOT_BIOME);
 		}
+		if (!Speakers.hasNose(villager)) {
+			options.add(NO_NOSE);
+		}
 		options.add(switch (profession(villager)) {
 			case "nitwit" -> NITWIT;
 			case "none" -> UNEMPLOYED;
@@ -255,8 +324,11 @@ public final class VillagerReactions {
 	}
 
 	private static void startConversation(DialogEngine engine, Villager villager, Villager partner) {
+		boolean mine = Speakers.hasNose(villager);
+		boolean theirs = Speakers.hasNose(partner);
+		String group = mine && theirs ? GROUP_NOSES : !mine && !theirs ? GROUP_NO_NOSES : GROUP_ONE_NOSE;
 		List<List<String>> starters = engine.library().conversations().stream()
-				.filter(parts -> parts.getFirst().startsWith(NOSED_CONVERSATIONS)).toList();
+				.filter(parts -> parts.getFirst().startsWith(group)).toList();
 		if (starters.isEmpty()) {
 			return;
 		}

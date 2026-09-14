@@ -255,6 +255,10 @@ public final class HurtReactions {
 
 	/** Called (through a mixin) when an effect is added to a villager by something. */
 	public static void effectAdded(LivingEntity entity, Holder<MobEffect> effect, Entity source) {
+		if (Speakers.kindOf(entity) == Kind.TRADER && !(entity instanceof Villager)) {
+			WorldReactions.traderGotEffect(entity);
+			return;
+		}
 		if (!(entity instanceof Villager villager) || source == null) {
 			return;
 		}

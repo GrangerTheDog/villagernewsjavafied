@@ -45,10 +45,26 @@ def main():
         by_sensor |= set(re.findall(r"scriptevent oreville_vn:\w+ (\w+)", entity.read_text()))
     by_sensor &= set(dialogs)
 
+    # Conversation parts are reached through their chain: covered once its first line (or its group) is.
+    data = json.loads(DIALOGS.read_text())
+    groups = set(re.findall(r'GROUP_\w+ = "(\w+)"', java))
+    by_chain = set()
+    for chain in data.get("conversations", []):
+        if chain[0] in in_java or any(chain[0].startswith(g) for g in groups):
+            by_chain |= set(chain)
+    # Hurt voices and death cries are played from sound tables, not as dialogs.
+    hurt = set(data.get("hurt_sounds", {}).get("adult", [])) | set(data.get("hurt_sounds", {}).get("baby", []))
+    death = set()
+    for entity in (ROOT / "dev/converted/assets/villagernewsjavafied/bedrock/entity").glob("*.json"):
+        effects = json.loads(entity.read_text())["minecraft:client_entity"]["description"].get("sound_effects", {})
+        death |= set(effects.values())
+    by_sound = {d for d, v in dialogs.items() if v["lines"] and all(l["sound"] in hurt | death for l in v["lines"])}
+
     rows = []
     for dialog_id, dialog in dialogs.items():
         title, trigger, _ = guide.get(dialog_id, ("", "", ""))
-        how = "java" if dialog_id in in_java else "sensor" if dialog_id in by_sensor else ""
+        how = ("java" if dialog_id in in_java else "sensor" if dialog_id in by_sensor
+               else "chain" if dialog_id in by_chain else "sound" if dialog_id in by_sound else "")
         rows.append((how == "", title or "~", dialog_id, len(dialog["lines"]), how, trigger))
     rows.sort()
 
@@ -56,7 +72,8 @@ def main():
     lines = [
         "# Dialog coverage (local report, not committed)",
         "",
-        f"{covered} of {len(rows)} dialogs reachable ({len(in_java)} hand-ported, {len(by_sensor - in_java)} via sensors); "
+        f"{covered} of {len(rows)} dialogs reachable ({len(in_java)} hand-ported, {len(by_sensor - in_java)} via sensors, "
+        f"{len(by_chain - in_java - by_sensor)} as conversation parts, {len(by_sound - in_java - by_sensor - by_chain)} as hurt/death sounds); "
         f"{len(guide)} have a guide entry.",
         "",
         "| covered | guide title | dialog | lines | trigger |",
