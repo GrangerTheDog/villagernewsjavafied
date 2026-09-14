@@ -40,3 +40,6 @@ replay_*.log
 
 # Created by Minecraft's log4j config when tests load game classes
 /logs/
+
+# DevShots: its own game directory and throwaway world (see tools/devshots.sh)
+/run-devshots/

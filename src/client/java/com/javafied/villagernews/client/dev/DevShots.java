@@ -30,12 +30,20 @@ import java.util.List;
  * removed first, so it runs once per request. If it names steps (say
  * {@code mannequin, guide}), only the steps starting with those run. Does
  * nothing otherwise.
+ *
+ * <p>It changes the world it runs in (items, mobs, time), so it only runs
+ * in its own game directory, {@code run-devshots}, on a throwaway world -
+ * never in {@code run}, where the real test worlds are.
  */
 public final class DevShots {
 	private static final String FLAG = VillagerNewsJavafied.MOD_ID + "-devshots";
+	private static final String GAME_DIR = "run-devshots";
 	private static final int SETTLE_TICKS = 40;
 
-	private record Step(String name, Runnable action) {
+	private record Step(String name, Runnable action, int settleTicks) {
+		Step(String name, Runnable action) {
+			this(name, action, SETTLE_TICKS);
+		}
 	}
 
 	private static final List<Step> steps = new ArrayList<>();
@@ -49,8 +57,14 @@ public final class DevShots {
 	}
 
 	public static void init() {
-		Path flag = FabricLoader.getInstance().getGameDir().resolve(FLAG);
+		Path gameDir = FabricLoader.getInstance().getGameDir();
+		Path flag = gameDir.resolve(FLAG);
 		if (!Files.exists(flag)) {
+			return;
+		}
+		// It gives, takes and spawns things in whatever world it's in: never anywhere but its own game directory.
+		if (!gameDir.toAbsolutePath().normalize().endsWith(GAME_DIR)) {
+			VillagerNewsJavafied.LOGGER.warn("DevShots only runs in its own game directory ({}), not {}", GAME_DIR, gameDir);
 			return;
 		}
 		String only;
@@ -72,6 +86,16 @@ public final class DevShots {
 			mannequin(180);
 			talk(true);
 		}));
+		steps.add(new Step("trader", DevShots::trader));
+		steps.add(new Step("trader-hit", () -> onServer(player -> {
+			var trader = player.level().getEntitiesOfClass(net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader.class,
+					player.getBoundingBox().inflate(8)).stream().findFirst().orElse(null);
+			if (trader != null) {
+				trader.hurtServer(player.level(), player.damageSources().playerAttack(player), 0.5f);
+			}
+		}), 15));
+		steps.add(new Step("trader-idle", () -> {
+		}, 45 * 20));
 		hold("mic-third-front", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_FRONT);
 		hold("mic-third-back", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.THIRD_PERSON_BACK);
 		hold("mic-first", ModItems.MICROPHONE, ModItems.HANDBOOK, CameraType.FIRST_PERSON);
@@ -194,6 +218,56 @@ public final class DevShots {
 		}
 	}
 
+	/**
+	 * A wandering trader a few blocks ahead, looking at the player, with the
+	 * dialog debug overlay on: the next steps hit it, then wait out its idle
+	 * chatter timer.
+	 */
+	private static void trader() {
+		Minecraft minecraft = Minecraft.getInstance();
+		hideHud(minecraft, false);
+		minecraft.options.setCameraType(CameraType.FIRST_PERSON);
+		if (minecraft.player != null) {
+			minecraft.player.setYRot(0);
+			minecraft.player.setXRot(10);
+		}
+		onServer(player -> {
+			clear(player);
+			player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			var level = player.level();
+			var trader = net.minecraft.world.entity.EntityTypes.WANDERING_TRADER.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			if (trader == null) {
+				return;
+			}
+			trader.setPos(player.getX(), player.getY(), player.getZ() + 3);
+			trader.setYRot(180);
+			trader.setYHeadRot(180);
+			trader.setYBodyRot(180);
+			trader.setDespawnDelay(20 * 60 * 10);
+			level.addFreshEntity(trader);
+			server(player).getCommands().performPrefixedCommand(player.createCommandSourceStack(), "villagernews debug");
+		});
+	}
+
+	private static void onServer(java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> action) {
+		Minecraft minecraft = Minecraft.getInstance();
+		var server = minecraft.getSingleplayerServer();
+		if (server == null || minecraft.player == null) {
+			return;
+		}
+		var uuid = minecraft.player.getUUID();
+		server.execute(() -> {
+			var player = server.getPlayerList().getPlayer(uuid);
+			if (player != null) {
+				action.accept(player);
+			}
+		});
+	}
+
+	private static net.minecraft.server.MinecraftServer server(net.minecraft.server.level.ServerPlayer player) {
+		return player.level().getServer();
+	}
+
 	private static void hideHud(Minecraft minecraft, boolean hidden) {
 		if (minecraft.gui.hud.isHidden() != hidden) {
 			minecraft.gui.hud.toggle();
@@ -286,6 +360,6 @@ public final class DevShots {
 			return;
 		}
 		steps.get(step).action().run();
-		wait = step == 0 ? SETTLE_TICKS * 3 : SETTLE_TICKS;
+		wait = step == 0 ? SETTLE_TICKS * 3 : steps.get(step).settleTicks();
 	}
 }
